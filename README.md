@@ -64,11 +64,16 @@ macOS 公开接口（`AudioHardwareCreateAggregateDevice`，哪怕带 stacked �
 
 ## 构建运行
 
+**不想自己编译？** 到 [Releases](https://github.com/boxter007/lefu/releases) 下载 `Lefu-vX.Y.Z.zip`（通用二进制，arm64 + Intel 双架构），解压拖进 Applications 即可。每次发布 tag 都由 GitHub Actions 自动构建。
+
+自己构建：
+
 ```bash
 git clone <本仓库>
 cd lefu
 swift build            # 日常开发
-bash scripts/build_app.sh   # 组装 build/乐府.app（已内置 LAME，无需 Homebrew）
+bash scripts/build_app.sh        # 组装 build/乐府.app（本机架构）
+UNIVERSAL=1 bash scripts/build_app.sh   # 通用二进制（arm64 + Intel，纯 CLT 即可）
 open build/乐府.app
 ```
 

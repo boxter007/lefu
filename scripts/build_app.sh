@@ -6,14 +6,25 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 APP="build/乐府.app"
 
-echo "== 1. swift release 编译 =="
-swift build -c release
+if [ "${UNIVERSAL:-0}" = "1" ]; then
+  echo "== 1. swift release 编译（universal：arm64 + x86_64，两次单架构 + lipo 合并）=="
+  swift build -c release --arch arm64
+  swift build -c release --arch x86_64
+  mkdir -p .build/apple/Products/Release
+  lipo -create .build/arm64-apple-macosx/release/乐府 \
+               .build/x86_64-apple-macosx/release/乐府 \
+               -output .build/apple/Products/Release/乐府
+else
+  echo "== 1. swift release 编译 =="
+  swift build -c release
+fi
 
 echo "== 2. 组装 .app 结构 =="
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
 mkdir -p "$APP/Contents/Resources/zh-Hans.lproj" "$APP/Contents/Resources/en.lproj"
 BIN=".build/release/乐府"
+[ "${UNIVERSAL:-0}" = "1" ] && BIN=".build/apple/Products/Release/乐府"
 [ -f "$BIN" ] || BIN=".build/release/Lefu"   # 兼容旧 target 名的本地缓存
 cp "$BIN" "$APP/Contents/MacOS/乐府"
 
@@ -62,6 +73,11 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
 </dict>
 </plist>
 PLIST
+
+# 版本注入：APP_VERSION 环境变量优先（tag 发布时由工作流传 v1.2.3 之类）
+if [ -n "${APP_VERSION:-}" ]; then
+  /usr/bin/sed -i '' "s|<string>1.0.0</string>|<string>${APP_VERSION}</string>|" "$APP/Contents/Info.plist"
+fi
 
 echo "== 3. ad-hoc 签名 =="
 codesign --force --deep -s - "$APP" 2>/dev/null || true

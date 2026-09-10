@@ -1,0 +1,36 @@
+name: Release
+
+# 打 tag（v1.2.3 之类）自动构建通用二进制（arm64 + Intel）并发布 Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LAME
+        run: brew install lame
+
+      - name: Build universal app
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          UNIVERSAL=1 APP_VERSION="$VERSION" bash scripts/build_app.sh
+
+      - name: Zip app
+        run: |
+          cd build
+          ditto -c -k --keepParent 乐府.app "Lefu-${GITHUB_REF_NAME}.zip"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/Lefu-*.zip
+          generate_release_notes: true
