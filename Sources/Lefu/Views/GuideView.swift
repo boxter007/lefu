@@ -236,7 +236,7 @@ struct GuideView: View {
                 flowNode(icon: "waveform.badge.plus", title: "BlackHole", desc: "乐府从这里录", tint: th.live)
                 flowNode(icon: "hifispeaker", title: "扬声器", desc: "你照常听", tint: th.accent)
             }
-            flowRow(icon: "scissors", title: "收卷裁曲", desc: "按切歌点切段 → 配歌词 → 编码 → 写标签封面 → 入库")
+            flowRow(icon: "scissors", title: "实时裁歌", desc: "按切歌点切段 → 配歌词 → 编码 → 写标签封面 → 入库")
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(th.panel.opacity(0.7)))
