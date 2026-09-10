@@ -101,7 +101,6 @@ final class SessionController: ObservableObject {
     private var monitor = NowPlayingMonitor()
     private var timeline: [TimelineEntry] = []
     private var sessionDir: URL?
-    private var wavURL: URL?
     private var tickTimer: Timer?
     private var rowID = 0
     private var subscribers = Set<AnyCancellable>()
@@ -249,6 +248,7 @@ final class SessionController: ObservableObject {
         let day = out.appendingPathComponent(dayString())
         let sess = day.appendingPathComponent("session-" + timeString())
         try? FileManager.default.createDirectory(at: sess, withIntermediateDirectories: true)
+        sweepOrphanSessionDirs(in: day)
         sessionDir = sess
         // 逐首录制：切歌即换文件，一首一收卷（不再集中大 WAV + 事后裁曲）
         // songIndex = 当前文件的序号；首个文件 song-001，切歌后从 song-002 起（避免自换自）
@@ -366,23 +366,28 @@ final class SessionController: ObservableObject {
         var startT = 0.0
         if rotate {
             songIndex += 1
-            let newURL = sessionDir!.appendingPathComponent(String(format: "song-%03d.wav", songIndex))
-            do {
-                let prevFile = songFileURL
-                let prevEntries = pendingEntries
-                let prevRowIDs = pendingRowIDs
-                try capture.rotate(to: newURL)
-                songFileURL = newURL
-                pendingEntries = []
-                pendingRowIDs = []
-                if !prevEntries.isEmpty, let file = prevFile {
-                    Diag.log("SC rotate 成功 → 收卷 \(file.lastPathComponent)")
-                    finalizeFile(file, entries: prevEntries, rowIDs: prevRowIDs)
+            if let sdir = sessionDir {
+                let newURL = sdir.appendingPathComponent(String(format: "song-%03d.wav", songIndex))
+                do {
+                    let prevFile = songFileURL
+                    let prevEntries = pendingEntries
+                    let prevRowIDs = pendingRowIDs
+                    try capture.rotate(to: newURL)
+                    songFileURL = newURL
+                    pendingEntries = []
+                    pendingRowIDs = []
+                    if !prevEntries.isEmpty, let file = prevFile {
+                        Diag.log("SC rotate 成功 → 收卷 \(file.lastPathComponent)")
+                        finalizeFile(file, entries: prevEntries, rowIDs: prevRowIDs)
+                    }
+                } catch {
+                    // 换文件失败：本首并入当前文件，从实际位置起切
+                    Diag.log("SC rotate 失败：\(error.localizedDescription)")
+                    showToast("换文件失败，本首并入上一文件：\(error.localizedDescription)")
+                    startT = capture.recordedSeconds
                 }
-            } catch {
-                // 换文件失败：本首并入当前文件，从实际位置起切
-                Diag.log("SC rotate 失败：\(error.localizedDescription)")
-                showToast("换文件失败，本首并入上一文件：\(error.localizedDescription)")
+            } else {
+                Diag.log("SC rotate 跳过：sessionDir 缺失（不应发生），本首并入当前文件")
                 startT = capture.recordedSeconds
             }
         }
@@ -472,9 +477,15 @@ final class SessionController: ObservableObject {
         if !pendingEntries.isEmpty, let file = songFileURL {
             Diag.log("SC stopAndCut → 收卷尾首 \(file.lastPathComponent) entries=\(pendingEntries.count)")
             finalizeFile(file, entries: pendingEntries, rowIDs: pendingRowIDs)
+        } else if let file = songFileURL {
+            // 没打过任何点（汽水没播/候选全被确认器滤掉）：录音无从裁切，进废纸篓可反悔
+            Diag.log("SC stopAndCut 无时间轴，录音进废纸篓 \(file.lastPathComponent)")
+            LefuTrash.trash(file)
+            songFileURL = nil
         }
         pendingEntries = []
         pendingRowIDs = []
+        tryCleanupSessionDir()
         refreshLibrary()
     }
 
@@ -535,7 +546,6 @@ final class SessionController: ObservableObject {
                 // 文件总时长（换算歌曲时长用）
                 let fileSize = ((try? FileManager.default.attributesOfItem(atPath: file.path))?[.size] as? NSNumber)?.int64Value ?? 0
                 let fileSeconds = max(0, (Double(fileSize) - 44) / max(1, bytesPerSecond))
-                var wavDirty = false   // 有失败 → 保留 WAV 供裁曲页手动重切
                 for (i, task) in tasks.enumerated() {
                     let dur = (i + 1 < tasks.count) ? max(0, tasks[i + 1].entry.t - task.entry.t)
                                                     : max(0, fileSeconds - task.entry.t)
@@ -552,11 +562,8 @@ final class SessionController: ObservableObject {
                             self.doneStats.skippedCount += 1
                         case .failed:
                             self.doneStats.failedCount += 1
-                            wavDirty = true
                         default: break
                         }
-                    } else if task.stage == .failed {
-                        wavDirty = true
                     }
                     // 行状态终态回填：无条件按行号写（行号全局唯一，跨场也写不串；
                     // 上一场的行多半已被清空，找不到就自然跳过）——这一步是「收卷中」卡死的最终兜底
@@ -572,48 +579,48 @@ final class SessionController: ObservableObject {
                         }
                     }
                 }
-                // 编码成功的文件 WAV 用完即清（废纸篓，可反悔）；失败保留
-                if !wavDirty {
-                    try? FileManager.default.trashItem(at: file, resultingItemURL: nil)
-                    if self.songFileURL == file { self.songFileURL = nil }
-                }
+                // 文件 WAV 用完即清：成败一律进废纸篓（可反悔）。
+                // 裁曲页已退役，失败段没有人工重切的入口，留着只会让 session 目录越积越乱；
+                // 废纸篓本身就是反悔通道，真要抢救去那里捞。
+                LefuTrash.trash(file)
+                if self.songFileURL == file { self.songFileURL = nil }
+                self.tryCleanupSessionDir()
                 self.refreshLibrary()
             }
         }
         cutter.run(entries: entries)   // 强持有自撑到完成
     }
 
-    // MARK: 结束采录（独立次级操作：停止录音但不裁曲，本次 WAV 移到废纸篓可反悔）
-    func endSession() {
-        guard state == .live else { return }
-        monitor.stop()
-        tickTimer?.invalidate()
-        capture.stop()
-        state = .idle
-        deleteRecording()
-        reset()
-        showToast("已结束采录 · 本次录音未裁曲，已移到废纸篓")
+    // MARK: session 目录管理
+    // session 目录只是逐首 WAV 的中转站：每首 WAV 在流水线收尾时已各自进废纸篓，
+    // 目录里一个 .wav 都不剩（且已不在录制中）就把目录本身也清掉，不让空壳混在成品旁。
+
+    /// 目录清空即自动清目录（每首 onAllDone 收尾 + stopAndCut 时调用；录制中绝不动目录）
+    private func tryCleanupSessionDir() {
+        guard let dir = sessionDir, state != .live else { return }
+        let fm = FileManager.default
+        if let files = try? fm.contentsOfDirectory(atPath: dir.path),
+           files.contains(where: { $0.hasSuffix(".wav") }) {
+            return   // 还有在途流水线没消化的 WAV，等它们收完再清
+        }
+        LefuTrash.trash(dir)
+        Diag.log("SC session 目录已清 \(dir.lastPathComponent)")
+        sessionDir = nil
     }
 
-    // MARK: 清理本次录音（移到废纸篓，可反悔）
-    var hasRecording: Bool { wavURL != nil || sessionDir != nil }
-
-    func deleteRecording() {
+    /// 开新场时顺手清掉旧的空 session 目录（App 被杀/崩溃留下的孤儿；全部废纸篓可反悔）
+    private func sweepOrphanSessionDirs(in day: URL) {
         let fm = FileManager.default
-        var trashed = false
-        for url in [wavURL, sessionDir].compactMap({ $0 }) {
-            var resulting: NSURL?
-            do {
-                try fm.trashItem(at: url, resultingItemURL: &resulting)
-                trashed = true
-            } catch {
-                showToast("清理失败：\(error.localizedDescription)")
-                return
-            }
+        guard let entries = try? fm.contentsOfDirectory(atPath: day.path) else { return }
+        for f in entries where f.hasPrefix("session-") {
+            let u = day.appendingPathComponent(f)
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: u.path, isDirectory: &isDir), isDir.boolValue else { continue }
+            let files = (try? fm.contentsOfDirectory(atPath: u.path)) ?? []
+            guard !files.contains(where: { $0.hasSuffix(".wav") }) else { continue }
+            LefuTrash.trash(u)
+            Diag.log("SC 清掉孤儿 session 目录 \(f)")
         }
-        wavURL = nil
-        sessionDir = nil
-        if trashed { showToast("录音已移到废纸篓") }
     }
 
     // MARK: 返回首页
@@ -681,7 +688,7 @@ final class SessionController: ObservableObject {
                     var isDir: ObjCBool = false
                     guard fm.fileExists(atPath: u.path, isDirectory: &isDir) else { continue }
                     if isDir.boolValue {
-                        scan(u, depth: depth + 1)   // 日期目录、裁曲等子目录
+                        scan(u, depth: depth + 1)   // 日期目录、session 等子目录
                         continue
                     }
                     let ext = (f as NSString).pathExtension.lowercased()

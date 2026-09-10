@@ -858,12 +858,6 @@ struct RecordView: View {
                     session.openOutputFolder()
                 } label: { Text("打开文件夹") }
                 .buttonStyle(PillStyle(theme: th, kind: .normal))
-                if session.hasRecording {
-                    Button {
-                        session.deleteRecording()
-                    } label: { Text("删除录音") }
-                    .buttonStyle(PillStyle(theme: th, kind: .normal))
-                }
                 Button {
                     session.reset()
                 } label: { Text("返回首页") }
