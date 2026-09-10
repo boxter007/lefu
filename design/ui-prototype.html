@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-page-node-id="SdDRnbC3sgxKVnQ8tl5dym">
+<head data-page-node-id="0p3dR1QB9DUidbFDRpZCfA">
+<meta charset="UTF-8" data-page-node-id="NQdAOTGuRHBh9JEqFr4CKm">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="U9McPHIkEHwRIJw5cmmbce">
+<title>乐府 · UI 交互原型</title>
+<style>
+  :root[data-theme="dark"]{
+    --bg:#141319; --panel:#1D1B25; --panel2:#26252F; --rail:#18171F;
+    --border:#2A2A33; --border2:#3A3A44;
+    --text:#F0EDF4; --text2:#9B9BA5; --text3:#6E6478;
+    --accent:#ED93B1; --accent-contrast:#141319;
+    --live:#FF8A3C; --ok:#3CBF5A; --skip:#6B6B76;
+    --wave-dim:#3A3444; --shadow:rgba(0,0,0,.45);
+    --cover1:#993556; --cover2:#534AB7; --cover3:#0F6E56; --cover4:#BA7517;
+    --cover5:#185FA5; --cover6:#639922; --cover7:#993556; --cover8:#72243E; --cover9:#D4537E;
+  }
+  :root[data-theme="light"]{
+    --bg:#FBFAFC; --panel:#FFFFFF; --panel2:#EFEAF3; --rail:#F5F3F8;
+    --border:rgba(0,0,0,.08); --border2:rgba(0,0,0,.14);
+    --text:#241F2E; --text2:#8A8494; --text3:#B0AAB8;
+    --accent:#D4537E; --accent-contrast:#FFFFFF;
+    --live:#D85A30; --ok:#0F6E56; --skip:#A5A1AC;
+    --wave-dim:#DAD5E0; --shadow:rgba(40,30,60,.14);
+    --cover1:#F4C0D1; --cover2:#AFA9EC; --cover3:#5DCAA5; --cover4:#EF9F27;
+    --cover5:#85B7EB; --cover6:#97C459; --cover7:#F4C0D1; --cover8:#ED93B1; --cover9:#D4537E;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px; font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+    background:#232128; transition:background .3s;
+  }
+  :root[data-theme="light"] body{background:#C9C4D4}
+  .window{
+    width:900px; max-width:100%; height:640px; border-radius:14px; overflow:hidden;
+    background:var(--bg); border:0.5px solid var(--border2);
+    box-shadow:0 22px 60px var(--shadow); display:flex; flex-direction:column; color:var(--text);
+    transition:background .3s,color .3s; position:relative;
+  }
+  .chrome{display:flex;align-items:center;padding:10px 14px;background:var(--rail);border-bottom:0.5px solid var(--border);flex-shrink:0}
+  .lights{display:flex;gap:6px}
+  .lights i{width:11px;height:11px;border-radius:50%;display:block}
+  .chrome .title{flex:1;text-align:center;font-size:13px;color:var(--text2)}
+  .chrome .rec{font-size:11px;font-weight:500;color:var(--text3);display:flex;align-items:center;gap:5px}
+  .chrome .rec.on{color:var(--live)}
+  .dot-live{width:7px;height:7px;border-radius:50%;background:currentColor;animation:breath 1s ease-in-out infinite}
+  @keyframes breath{50%{opacity:.25}}
+  .body-row{display:flex;flex:1;min-height:0}
+  .rail{width:58px;background:var(--rail);border-right:0.5px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:14px;padding:14px 0;flex-shrink:0}
+  .rail .item{width:46px;text-align:center;cursor:pointer;opacity:.5;transition:opacity .2s}
+  .rail .item.active{opacity:1}
+  .rail .icon{width:32px;height:32px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;margin:0 auto}
+  .rail .item.active .icon{background:var(--accent)}
+  .rail .item.active .icon svg *{stroke:var(--accent-contrast)!important;fill:var(--accent-contrast)!important}
+  .rail .label{font-size:11px;margin-top:3px;color:var(--text2)}
+  .rail .item.active .label{color:var(--accent)}
+  .content{flex:1;min-width:0;overflow-y:auto;padding:16px 18px}
+  .page{display:none;animation:slidein .25s ease}
+  .page.on{display:block}
+  #page-record.on{display:flex;flex-direction:column;height:100%;padding:0}
+  #page-record .content-pad{padding:16px 18px;display:flex;flex-direction:column;flex:1;min-height:0}
+  @keyframes slidein{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+
+  /* ---------- 录制台 · 状态视图 ---------- */
+  .sv{display:none;flex-direction:column;flex:1;min-height:0}
+  .sv.on{display:flex}
+  #sv-live .rows{flex:1;min-height:0;overflow-y:auto}
+  #sv-live .controls{flex-shrink:0}
+
+  /* 待机 */
+  #sv-idle{align-items:center;justify-content:center;gap:6px;text-align:center}
+  .idle-ring{
+    width:148px;height:148px;border-radius:50%;cursor:pointer;margin-bottom:14px;
+    border:2px solid var(--border2);background:var(--panel);
+    display:flex;align-items:center;justify-content:center;position:relative;
+    transition:border-color .25s,transform .25s,box-shadow .25s;
+  }
+  .idle-ring::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:1px solid var(--border);transition:inset .25s,opacity .25s}
+  .idle-ring:hover{border-color:var(--accent);transform:scale(1.03);box-shadow:0 8px 32px rgba(0,0,0,.25)}
+  .idle-ring:hover::after{inset:-16px;border-color:var(--accent)}
+  .idle-ring svg{opacity:.85}
+  .idle-t{font-size:16px;font-weight:500}
+  .idle-s{font-size:12px;color:var(--text3);margin-top:4px}
+  .env-checks{display:flex;gap:10px;margin-top:22px}
+  .env-chip{font-size:11px;color:var(--text3);background:var(--panel);border:0.5px solid var(--border);border-radius:16px;padding:5px 12px;display:flex;align-items:center;gap:5px;transition:color .3s}
+  .env-chip .st{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+  .env-chip.ok{color:var(--ok)} .env-chip.ok .st{background:var(--ok)}
+  .env-chip.bad{color:#E24B4A} .env-chip.bad .st{background:#E24B4A;cursor:pointer}
+
+  /* 收卷裁曲中 */
+  .cut-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .cut-head .t{font-size:14px;font-weight:500}
+  .cut-head .s{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+  .cut-bar{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-bottom:14px}
+  .cut-bar i{display:block;height:100%;border-radius:3px;background:var(--accent);width:0%;transition:width .8s ease}
+  #sv-cutting .pipe{flex:1;min-height:0;overflow-y:auto}
+
+  /* 本次完成 */
+  #sv-done{align-items:center;justify-content:center;text-align:center}
+  .done-badge{
+    width:64px;height:64px;border-radius:50%;background:var(--ok);color:#fff;
+    display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+    animation:pop .4s ease;
+  }
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+  .done-t{font-size:17px;font-weight:500}
+  .done-s{font-size:12px;color:var(--text2);margin-top:5px}
+  .done-rows{width:100%;max-width:520px;margin-top:18px;display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;text-align:left}
+  .done-rows .row{padding:6px 12px}
+  .done-rows .size{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+  #sv-done .controls{margin-top:16px}
+
+  /* 环境引导遮罩 */
+  .ov{
+    position:absolute;inset:0;background:var(--bg);z-index:20;display:none;
+    align-items:center;justify-content:center;animation:fadein .25s ease;
+  }
+  .ov.on{display:flex}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .ov-card{width:460px;max-width:88%;text-align:center}
+  .ov-card .ic{width:72px;height:72px;border-radius:18px;background:var(--panel2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+  .ov-card h2{font-size:18px;font-weight:500;margin-bottom:8px}
+  .ov-card p{font-size:13px;color:var(--text2);line-height:1.7}
+  .steps{display:flex;flex-direction:column;gap:10px;margin:18px 0;text-align:left}
+  .step{display:flex;gap:12px;background:var(--panel);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;align-items:center}
+  .step .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-contrast);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step .k{font-size:13px}
+  .step .d{font-size:11px;color:var(--text3);margin-top:1px}
+
+  /* ---------- 通用 ---------- */
+  .np{display:flex;gap:16px;align-items:center}
+  .np .art{width:92px;height:92px;border-radius:12px;background:var(--cover1);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .5s}
+  .np .meta{flex:1;min-width:0}
+  .np .tag{font-size:11px;color:var(--accent);letter-spacing:2px;margin-bottom:5px}
+  .np h1{font-size:24px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .np .sub{font-size:12px;color:var(--text2);margin:4px 0 10px}
+  .progress{display:flex;align-items:center;gap:10px}
+  .bar{flex:1;height:4px;border-radius:2px;background:var(--border);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:2px;background:var(--accent);width:0%;transition:width 1s linear}
+  .time{font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums}
+  .lyric{margin-top:10px;font-size:14px;line-height:1.5;transition:opacity .3s}
+  .lyric .cur{color:var(--text)}
+  .lyric .nxt{color:var(--text3)}
+  .wave{display:flex;align-items:flex-end;gap:3px;height:36px;margin:14px 0 12px}
+  .wave i{flex:1;background:var(--wave-dim);border-radius:2px;transition:height .12s ease}
+  .wave.playing i.live{background:var(--accent)}
+  .session-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .session-head .t{font-size:13px;font-weight:500}
+  .session-head .s{font-size:11px;color:var(--text3)}
+  .rows{display:flex;flex-direction:column;gap:5px}
+  .row{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:9px;padding:7px 12px;border:0.5px solid var(--border);transition:transform .25s,opacity .25s,background .3s}
+  .row.new{animation:slidein .3s ease}
+  .row.current{border-left:2px solid var(--accent)}
+  .row .idx{font-size:11px;color:var(--text3);width:16px;font-variant-numeric:tabular-nums}
+  .row .mini{width:24px;height:24px;border-radius:6px;flex-shrink:0;transition:background .5s}
+  .row .name{flex:1;font-size:13px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .artist{font-size:11px;color:var(--text2)}
+  .badge{font-size:11px;display:flex;align-items:center;gap:3px}
+  .badge.rec{color:var(--accent)}
+  .badge.ok{color:var(--ok)}
+  .badge.skip{color:var(--skip)}
+  .controls{display:flex;justify-content:center;gap:10px;padding-top:14px}
+  .pill{border-radius:20px;padding:8px 16px;font-size:12px;cursor:pointer;border:0.5px solid var(--border2);background:var(--panel2);color:var(--text2);transition:all .2s;user-select:none;font-family:inherit}
+  .pill:hover{filter:brightness(1.08)}
+  .pill.primary{background:var(--accent);color:var(--accent-contrast);font-weight:500;border-color:transparent}
+  .pill.danger{background:#E24B4A;color:#fff;border-color:transparent}
+  .toast{
+    position:absolute;left:50%;bottom:18px;transform:translateX(-50%) translateY(30px);
+    background:var(--panel2);border:0.5px solid var(--border2);color:var(--text);
+    font-size:12px;padding:8px 16px;border-radius:20px;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:30;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .stage-note{font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6}
+
+  /* ---------- 裁曲 ---------- */
+  .drop{
+    border:1.5px dashed var(--border2);border-radius:12px;padding:26px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel);
+  }
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--panel2)}
+  .drop .big{font-size:14px;font-weight:500;margin-top:8px}
+  .drop .hint{font-size:11px;color:var(--text3);margin-top:4px}
+  .rework-params{display:flex;gap:10px;margin:14px 0}
+  .field{flex:1;background:var(--panel);border:0.5px solid var(--border);border-radius:9px;padding:9px 12px}
+  .field .k{font-size:11px;color:var(--text3)}
+  .field .v{font-size:13px;margin-top:3px;display:flex;justify-content:space-between;align-items:center}
+  .seg{display:inline-flex;border:0.5px solid var(--border2);border-radius:7px;overflow:hidden;font-size:12px}
+  .seg span{padding:4px 10px;cursor:pointer;color:var(--text2)}
+  .seg span.on{background:var(--accent);color:var(--accent-contrast);font-weight:500}
+  .pipe{margin-top:10px}
+  .pipe .row{cursor:default}
+  .pipe .stages{display:flex;gap:4px;width:180px}
+  .pipe .st{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s}
+  .pipe .st.done{background:var(--ok)}
+  .pipe .st.run{background:var(--accent);animation:breath 1s infinite}
+
+  /* ---------- 设置 ---------- */
+  #page-settings{height:100%;overflow-y:auto}
+  .group-t{font-size:11px;color:var(--text2);font-weight:500;margin:14px 0 8px}
+  .group-t:first-child{margin-top:0}
+  .group{background:var(--panel);border-radius:10px;border:0.5px solid var(--border)}
+  .gi{display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .gi + .gi{border-top:0.5px solid var(--border)}
+  .gi .txt{flex:1;min-width:0}
+  .gi .k{font-size:13px}
+  .gi .d{font-size:11px;color:var(--text2);margin-top:1px}
+  .gi .d.mono{font-family:Menlo,monospace}
+  .switch{width:36px;height:20px;border-radius:10px;background:var(--border2);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
+  .switch i{width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s}
+  .switch.on{background:var(--ok)}
+  .switch.on i{left:18px}
+  .select{font-size:12px;background:var(--panel2);border:0.5px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);cursor:pointer}
+  .btn-mini{font-size:11px;background:var(--panel2);border:0.5px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text2);cursor:pointer}
+  .check-result{font-size:11px;display:flex;gap:10px;margin-left:6px}
+  .check-result span{color:var(--text3)}
+  .check-result span.ok{color:var(--ok)}
+  .demo-bar{
+    position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+    background:rgba(20,18,26,.92);border:0.5px solid rgba(255,255,255,.14);border-radius:22px;
+    padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:12px;color:#D8D4E2;backdrop-filter:blur(8px);
+  }
+  .demo-bar .seg span.on{background:#ED93B1;color:#141319}
+  .demo-bar .seg span{color:#B8B2C6}
+  .demo-bar .seg{border-color:rgba(255,255,255,.2)}
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body data-page-node-id="eE8Dr9Pv5A1FXRgcqvw7VN">
+<div class="window" data-page-node-id="ZOhTxngG9dGXIGAbxksGM6">
+  <div class="chrome" data-page-node-id="6GTm4kIZ9GRHLrpWsdsjwK">
+    <div class="lights" data-page-node-id="CDPNjciCvg5VgcYlMpGuZg"><i style="background:#F55555" data-page-node-id="Xgd6PZtpLD73JZv4qn55Ms"></i><i style="background:#F0A63C" data-page-node-id="DIcvwebgmlSdHQIUmrHh50"></i><i style="background:#3CBF5A" data-page-node-id="WF2suaxW5Zy4HaOyCAhcl1"></i></div>
+    <div class="title" id="winTitle" data-page-node-id="kvnWNzuukwxathOM38jsGk">乐府 · 汽水内录归档</div>
+    <div class="rec" id="recChip" data-page-node-id="ExgUYQOyrHUsYUptD7ry9S"><span class="dot-live" id="recDot" style="display:none" data-page-node-id="ANxCC7tyYoUMuXO475f69Z"></span><span id="recText" data-page-node-id="Zh4vVCguJfnOd3p9PF0IEz">采录中</span></div>
+  </div>
+  <div class="body-row" data-page-node-id="umYkdmxCjDtf7M4RbAKglL">
+    <div class="rail" data-page-node-id="SCdwffbxFtBvoD3z9Pp8KF">
+      <div class="item active" data-page="record" title="采诗 · 录制台" data-page-node-id="0CX9u5eISokaj0RpzXxGUI">
+        <div class="icon" data-page-node-id="HEhD72IvgeTo6bWsUoNBpV"><svg width="16" height="16" viewBox="0 0 18 18" data-page-node-id="l7d0LUYIkVWUPDurWhWrz5"><circle cx="9" cy="9" r="5" fill="none" stroke="currentColor" stroke-width="1.6" data-page-node-id="NbXlaUGTR3wgMJ7QPsKjoH"/><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.6" data-page-node-id="oPrLKdeDoLCDvNb3lOAVbF"/></svg></div>
+        <div class="label" data-page-node-id="24sEJRlIvuswgghzkx5Aw6">采诗</div>
+      </div>
+      <div class="item" data-page="rework" title="裁曲 · 长录音裁成单曲" data-page-node-id="i9KzP1OD2UNaP5m83NadIp">
+        <div class="icon" data-page-node-id="UwuzRFGhuHnEKChsFWVoyj"><svg width="16" height="16" viewBox="0 0 18 18" data-page-node-id="hJr78IxRD5SplHEeejT0g0"><path d="M3 7V4h3M15 11v3h-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" data-page-node-id="NixCVyHZrOIDDMTNml4KeC"/><path d="M3 4l4 4M15 14l-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" data-page-node-id="Gf6VE2YcTyK0FSICycKAF9"/></svg></div>
+        <div class="label" data-page-node-id="qNpe2QKqrwKcwJikd9noa2">裁曲</div>
+      </div>
+      <div class="item" data-page="settings" title="设置" data-page-node-id="rE0ab4AZC1AyNXX9XBu7gU">
+        <div class="icon" data-page-node-id="jcGorBzt4PVRZsp7MhRoya"><svg width="16" height="16" viewBox="0 0 18 18" data-page-node-id="lAW8TwENu4i77WAndIblK4"><circle cx="9" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="9OIpqLDmCoUWSY5Yy79iOz"/><path d="M9 2v3M9 13v3M2 9h3M13 9h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-page-node-id="hJdLPK3Iqe6R0tatfB2VLE"/></svg></div>
+        <div class="label" data-page-node-id="VO29IijQ6rqDa4c3tgHnAZ">设置</div>
+      </div>
+    </div>
+    <div class="content" data-page-node-id="F9FKi1Qqdrht22dgbS6JP6">
+
+      <!-- ============ 采诗 · 录制台 ============ -->
+      <div class="page on" id="page-record" data-page-node-id="dOjwPeFM8kDqbvb9rMMXkU">
+
+        <!-- 状态一：待机 -->
+        <div class="sv" id="sv-idle" data-page-node-id="z0fSgmyoLDST9afBmdR6Za">
+          <div class="idle-ring" id="btnStart" data-page-node-id="EKSKQUCHktBuyy3rdc1U1f">
+            <svg width="46" height="46" viewBox="0 0 24 24" data-page-node-id="oVsdtY2dWHuvLISYZiB8nx"><path d="M8 5.5v13l11-6.5z" fill="var(--accent)" data-page-node-id="d51QXvVPGBLLHzA0DgTWGb"/></svg>
+          </div>
+          <div class="idle-t" data-page-node-id="ikfBn6mZAgjkJiGoflBX6m">开始采诗</div>
+          <div class="idle-s" data-page-node-id="mcTXr44USDRHCu4eKUFYBR">监听汽水音乐正在播放的内容，边听边录，府中已有的歌自动跳过</div>
+          <div class="env-checks" id="envChecks" data-page-node-id="9s6JyNAbfqwIMqiIaXF6L5">
+            <span class="env-chip" data-page-node-id="lH6cBZHYLjVkAlRHGwYvNS"><span class="st" data-page-node-id="pJwHCDhlV6KraCuQlycWCe"></span>BlackHole 驱动</span>
+            <span class="env-chip" data-page-node-id="Vhov9nM8R3y6Affs33hLba"><span class="st" data-page-node-id="OUOG4qz0QwXKXk3K9A4nJq"></span>采诗通道</span>
+            <span class="env-chip" data-page-node-id="GSrXy1JtPUpaSZTN25xLrQ"><span class="st" data-page-node-id="WMeDgtgNgY13A3EunrxqPj"></span>MP3 编码器</span>
+          </div>
+        </div>
+
+        <!-- 状态二：采录中 -->
+        <div class="sv on" id="sv-live" data-page-node-id="sDOQzHXxdZQp6kh3zUP5Ca">
+          <div class="content-pad" data-page-node-id="GMtQRa87rKIelBxtPcvzh9">
+            <div class="np" data-page-node-id="nlAsFvpLg9qoZkNqEiu2EA">
+              <div class="art" id="npArt" data-page-node-id="8E5nsAANGgmnXHcSyhT2Me">
+                <svg width="34" height="34" viewBox="0 0 24 24" data-page-node-id="gkkFdBFwI4gBKtzMKBOfuh"><path d="M9 18V6l10-2v11" stroke="rgba(255,255,255,.9)" stroke-width="1.8" fill="none" stroke-linecap="round" data-page-node-id="Ju32pP8Eoze6HjCw754FEj"/><circle cx="6.5" cy="18" r="2.5" fill="rgba(255,255,255,.9)" data-page-node-id="rOeIPeYNBLdAZ1iHkfklT3"/><circle cx="16.5" cy="15" r="2.5" fill="rgba(255,255,255,.9)" data-page-node-id="tbjKr9PmrqVJZeyO7rwEnz"/></svg>
+              </div>
+              <div class="meta" data-page-node-id="jcvD6lcLs6CofHqyTFShNd">
+                <div class="tag" data-page-node-id="p8BGBizJk7RNgDYhQXcnro">正在采录</div>
+                <h1 id="npTitle" data-page-node-id="cIgDRL2SSRPzQDEzqRyWN2">言不由衷</h1>
+                <div class="sub" id="npSub" data-page-node-id="XrKtBUIk1I3ULfw6Y8SnUq">克里、丝绒月亮 · 遗憾live版</div>
+                <div class="progress" data-page-node-id="Vf6lbbRQpHq2SYkIaoDnJ9">
+                  <div class="bar" data-page-node-id="d0ZAdCENNpzl3hxD8sX6dj"><i id="npBar" data-page-node-id="xAydVwFnFhG3UxBxe1Xmy9"></i></div>
+                  <span class="time" id="npTime" data-page-node-id="GXrlonFrMzwQf3ymhgQJAS">1:36 / 4:10</span>
+                </div>
+                <div class="lyric" data-page-node-id="1Nqg1EiZHoXtes1yxj7x17"><div class="cur" id="lyrCur" data-page-node-id="I5HtF0MsqfvJnAhO30XOLL">假使未来没有你在身边陪伴的时候</div><div class="nxt" id="lyrNxt" data-page-node-id="rOtdcef7wQyXeTJhW0PIfu">我一个人也能找到快乐</div></div>
+              </div>
+            </div>
+            <div class="wave" id="wave" data-page-node-id="oE6iReTZl04ptnKteeSYvQ"></div>
+            <div class="session-head" data-page-node-id="FAzyuEi86tAjQ6gduJcuYS">
+              <span class="t" data-page-node-id="hsSZYnGhzrkHji9LN2Sur9">本次会话 · <span id="trackCount" data-page-node-id="sVQsDOZy1xEOsgODB3tl5F">9</span> 首</span>
+              <span class="s" data-page-node-id="9PtZtyq2kA55bzRJbH2XAo">府中已有的歌自动跳过</span>
+            </div>
+            <div class="rows" id="trackRows" data-page-node-id="9kdgJQyTo91pctyzAcDEG0"></div>
+            <div class="controls" data-page-node-id="9lhzFjBwevLJlseYhkzMCs">
+              <button class="pill" id="btnNext" data-page-node-id="MFDmCJnrV8rF1Z8sFf1FPG">⏭ 下一阕</button>
+              <button class="pill danger" id="btnStop" data-page-node-id="1S2FChEVw3Jop7QyH0gTYQ">■ 收卷并裁曲</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 状态三：收卷裁曲中 -->
+        <div class="sv" id="sv-cutting" data-page-node-id="IfueDqK1WFtpw06NkWRBVM">
+          <div class="content-pad" data-page-node-id="0GCoBfhFIbsTT2eJMMTV0H">
+            <div class="cut-head" data-page-node-id="WkvlA2anSZruvdHFIXq9HC">
+              <span class="t" data-page-node-id="VKx2kNRfVQg4rANO6nFEXr">收卷完成 · 正在裁曲</span>
+              <span class="s" id="cutCount" data-page-node-id="xz1J37rutCcOPoybTebeDj">0 / 9 首</span>
+            </div>
+            <div class="cut-bar" data-page-node-id="9mg33Y9x590Grt3nEhD2yG"><i id="cutBar" data-page-node-id="HHVmJSdsF55skMXzgXt2r4"></i></div>
+            <div class="pipe" id="cutPipe" data-page-node-id="WqBnkltLTeMUrgtojLQQnD"></div>
+            <div class="stage-note" data-page-node-id="UBY1wd330RrfWHfhSWg9RI">切段 → 歌词 → 编码 → 标签，每首歌四步流水线；完成后自动进入「本次完成」。</div>
+          </div>
+        </div>
+
+        <!-- 状态四：本次完成 -->
+        <div class="sv" id="sv-done" data-page-node-id="tDlMhpIRGoARrFc9L6MfA7">
+          <div class="content-pad" style="align-items:center;justify-content:center;display:flex;flex-direction:column" data-page-node-id="EB3u9LvSdUmySAqZ3vLFNf">
+            <div class="done-badge" data-page-node-id="ASd6ulnW0RXA3BY024DloF"><svg width="30" height="30" viewBox="0 0 24 24" data-page-node-id="IYSNv7wdxYfcKLhEDIjMVK"><path d="M4.5 12.5l5 5 10-11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="CGR3vZ59KYn8dolL36Ez0A"/></svg></div>
+            <div class="done-t" data-page-node-id="MnjIR5Rr8JrTEJ4AsgWIUt">本次完成</div>
+            <div class="done-s" id="doneStats" data-page-node-id="yCTupYF8dOqiBbH6gWCDgc">采得 9 首 · 42.3 MB · 共 37 分钟</div>
+            <div class="done-rows" id="doneRows" data-page-node-id="fGhbwEIrBQGEdJJdBtbMBQ"></div>
+            <div class="controls" data-page-node-id="sEQHPjHYaX2rexG6O9Itbt">
+              <button class="pill" id="btnOpenDir" data-page-node-id="URAZ6s6AIw9Vo3Lz8bwUMt">打开文件夹</button>
+              <button class="pill primary" id="btnAgain" data-page-node-id="oji3DQObOPH4UOo2NmKXnj">再采一场</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="toast" id="toast" data-page-node-id="8cEq3YpHuG0OJdZaBcAB3f"></div>
+      </div>
+
+      <!-- ============ 裁曲 ============ -->
+      <div class="page" id="page-rework" data-page-node-id="NCjk0CfU7D7Cwqo6y3owSz">
+        <div class="drop" id="drop" data-page-node-id="feKddLt7drnqCH2LKjn7sK">
+          <svg width="30" height="30" viewBox="0 0 24 24" data-page-node-id="jImfy4gF242KO1aM1kqduq"><path d="M12 16V5M12 5l-4 4M12 5l4 4" stroke="var(--accent)" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="qkGFUIn3794nvwYFhx6E91"/><path d="M4 16v3h16v-3" stroke="var(--accent)" stroke-width="1.6" fill="none" stroke-linecap="round" data-page-node-id="THLDBCZKISPOFj7uXsI2Da"/></svg>
+          <div class="big" data-page-node-id="M7k7rdmGldVjY4FTqgiKCJ">把录音 WAV 拖进来，或点击选择</div>
+          <div class="hint" data-page-node-id="hRHEouswfcBqGbAwqOhCjp">支持带时间轴 .jsonl —— 有时间轴就能按歌精确裁，没有就按静音自动裁</div>
+        </div>
+        <div class="rework-params" data-page-node-id="Dqg5c87UJh5bEsfGBDfirB">
+          <div class="field" data-page-node-id="1ho7zt6hDuUICoaGWo0RrZ"><div class="k" data-page-node-id="ceySzDmArrdCsj41ztHvgc">最短收录时长</div><div class="v" data-page-node-id="QKGn7tAqyyJLn42r1e6j5o"><span id="minLenV" data-page-node-id="N4XzRVufywVnEDVcdv7ZoC">60 秒</span><div class="seg" data-set="minLen" data-page-node-id="ajrMlOSXDawmhO94VnN9lN"><span class="on" data-page-node-id="DesFDBT6oFqlMDIMmlmP0y">30</span><span data-page-node-id="pSzO1CxgVzjSRkgoxzZp9G">60</span><span data-page-node-id="5cXZMuT2rX78IqbI2KsO5A">120</span></div></div></div>
+          <div class="field" data-page-node-id="3Agb1BYqrZeHCg7OohsS2E"><div class="k" data-page-node-id="XoUmXfr5euW0FeThwaIceU">歌词来源</div><div class="v" data-page-node-id="kkI2RgCG3Hl8CEbW4W6Yee"><div class="seg" data-set="lyrSrc" data-page-node-id="3aAiGM0v62zCat4bIKcyq2"><span class="on" data-page-node-id="TlEKrEcbfFafVrFYHz7IaR">本地优先</span><span data-page-node-id="DBpw1Wfvao9M9mIsmFyHoa">仅本地</span><span data-page-node-id="bkEQAELGgAM5770LzgHktv">重新联网</span></div></div></div>
+          <div class="field" data-page-node-id="Le2yeaROesWEXQMwIqcVlF"><div class="k" data-page-node-id="bnVAvFHlsYlCIZn2v5VZo4">命名模板</div><div class="v" data-page-node-id="wLTDkEDgH6r0fzjNh2hea0"><div class="seg" data-set="naming" data-page-node-id="7v46ariEr5vjXYW0HwmCVa"><span class="on" data-page-node-id="U8XfNwYIOEz3JErQgMUgYy">歌手 - 歌名</span><span data-page-node-id="SZpqgS0AeO7TD2xSpMg7Jo">日期 歌名</span><span data-page-node-id="KPzRTH8mvUgFCql56ALzsw">歌名</span></div></div></div>
+        </div>
+        <div class="session-head" data-page-node-id="eSwvpBGuoW8ME79zygkbLX"><span class="t" data-page-node-id="S3HBNOxMNLjLDjJhqyxeYA">裁曲进度</span><span class="s" data-page-node-id="GuKGpV33RRQlMwhiAA1qIf">切段 → 歌词 → 编码 → 标签</span></div>
+        <div class="pipe" id="pipeRows" data-page-node-id="Kfa5jrogxl0ttbNqEGyiq0"></div>
+        <div class="controls" style="justify-content:flex-start" data-page-node-id="xZmKgQbq5Iv5NadYNTTBAX">
+          <button class="pill primary" id="btnRework" data-page-node-id="uKCGB52zD9gjqOdCuRcE0F">开始裁曲</button>
+          <button class="pill" id="btnDemoFill" data-page-node-id="na8q5KQR0Sqaq12ClhEyn5">载入示例任务</button>
+        </div>
+        <div class="stage-note" data-page-node-id="ptTgyyxKSf6nyoUFese0Vl">原型提示：先「载入示例任务」再「开始裁曲」，看每首歌四段管线的点亮顺序。</div>
+      </div>
+
+      <!-- ============ 设置 ============ -->
+      <div class="page" id="page-settings" data-page-node-id="2HJHNAHmmCauxjZbvsPzSG">
+        <div class="group-t" data-page-node-id="X8ue17ztCyA9jW3yYyV3VO">录制</div>
+        <div class="group" data-page-node-id="KNpekEZpV6mr7AHu2wNJ11">
+          <div class="gi" data-page-node-id="WoAky8RboFgUkDQxQCq0m0"><div class="txt" data-page-node-id="Dw8CLUtPhVD1tPKoF2GTMU"><div class="k" data-page-node-id="1BGygiCguKLQBnAB4Y92ce">无声自动停</div><div class="d" data-page-node-id="58SA3y0NF27AGoglq616RV">连续两个周期检测到静音时结束录制</div></div><div class="switch on" data-sw data-page-node-id="BB9KbuRYPCciEP0I8AcYxC"><i data-page-node-id="QDtdFgkUEFoRtjlf5m5Sdd"></i></div></div>
+          <div class="gi" data-page-node-id="nnEN9GUa7QfuY5FE5NcpXi"><div class="txt" data-page-node-id="cYDO11P0hnumFLcmFNEXFU"><div class="k" data-page-node-id="7BeoqyZ0kS4lkNNS24LLpb">最短收录时长</div><div class="d" data-page-node-id="dUdnSZQsvfENsGDbgKC7B0">低于此时长的段落丢弃</div></div><div class="select" data-page-node-id="jb9e3lMG6yhSEAHrarnFbs">60 秒 ▾</div></div>
+          <div class="gi" data-page-node-id="ZVWeXAWXu3eHc9fxyySZRB"><div class="txt" data-page-node-id="t1CAx9XnGVmnXCAmr6Um45"><div class="k" data-page-node-id="m7aDo1Ot3JADJLKSJ1pSsQ">输出位置</div><div class="d" data-page-node-id="EPmn5E31Ilw0YmmnPPb8eU">按日期自动建子目录</div></div><span class="d" style="color:var(--ok)" data-page-node-id="axqKNoPxD0dhUa99oBrThq">~/Music/乐府</span><span class="btn-mini" data-page-node-id="T01bBcqkUb3VaP1bpsFa5a">更改</span></div>
+          <div class="gi" data-page-node-id="SXYO9LLXGDLm8kW2QhBLDn"><div class="txt" data-page-node-id="W07gLuTLrAcbfebRe3jEHL"><div class="k" data-page-node-id="9ktSlaFtgc63PVQ0sZihZa">默认格式</div><div class="d" data-page-node-id="mELsDFrF00fLNeq4tTLdfC">MP3 320k 兼容性最好；M4A 体积更小</div></div><div class="seg" data-set="fmt" data-page-node-id="bxLdNbummFgH0wqB9hh5ox"><span class="on" data-page-node-id="EZUVcmbAwcrapXrEgTMEDB">MP3 320k</span><span data-page-node-id="Stel4uUelDgiGyCC2AMc2Y">M4A 256k</span><span data-page-node-id="flxVgtIvAnfsPllhOSi0bX">WAV</span></div></div>
+        </div>
+        <div class="group-t" data-page-node-id="iiLR6d5YX7Fj8EagEtZlcm">歌词与封面</div>
+        <div class="group" data-page-node-id="qMGtum3I1tf6BVqBw4qQkF">
+          <div class="gi" data-page-node-id="gFx8RWYM5flajmNzUMQspm"><div class="txt" data-page-node-id="4TNIxnOE3wrGkxR3O8Fgn4"><div class="k" data-page-node-id="wc1HgmDMugQN522DgRlFfG">离线模式</div><div class="d" data-page-node-id="SMlowWW9pUCWI2iD2o1czd">只用汽水本地歌词缓存，不联网</div></div><div class="switch" data-sw data-page-node-id="1n9GKOTUdyqr9B79rsgOCD"><i data-page-node-id="l0tgGcJur9EEtaZv2hRRdf"></i></div></div>
+          <div class="gi" data-page-node-id="y4ivDAOR6DmVnI199AKkGb"><div class="txt" data-page-node-id="DB2w0rYIqvc9GiCbhN7F8j"><div class="k" data-page-node-id="qL5RjvAy89WXYEJGxgTvpQ">缺词联网兜底</div><div class="d" data-page-node-id="MFEVbTO8MLmhVDO94ZymTF">本地没有时按 LRCLIB → 网易云 顺序抓取</div></div><div class="switch on" data-sw data-page-node-id="KL7KI5piB9Yj3TUwNTb1QQ"><i data-page-node-id="qm9i11SQn9j1mluCCl35dK"></i></div></div>
+          <div class="gi" data-page-node-id="RyRtAiEfX8VUxibAwgSO3w"><div class="txt" data-page-node-id="Nx62TtYK8PEOOL9LwIXHYZ"><div class="k" data-page-node-id="DFM0hYkWNXwCuZfWP8q6Qs">封面</div><div class="d" data-page-node-id="MfGE42TSW7RzROQKGTy8ji">录制时随时间轴自动保存，零联网</div></div><span class="badge ok" data-page-node-id="8DUnQFqSp3wxoAjXbajoBF">✓ 始终开启</span></div>
+        </div>
+        <div class="group-t" data-page-node-id="PAqDExAJEm0XbjJ3UWaqKk">引擎（高级）</div>
+        <div class="group" data-page-node-id="WgHlAGJFh2ZQnD2maf2Fkv">
+          <div class="gi" data-page-node-id="6uaLs6xm3Sg1q6gemBWwPr"><div class="txt" data-page-node-id="QAbtQdmwsO7rt8RR0j3W0v"><div class="k" data-page-node-id="gf0DYxTbJWXyrx3hZXkxBU">环境自检</div><div class="d" data-page-node-id="tDMrMHn51cpfvxtgWOaCbX">BlackHole 驱动 / 正在播放通道 / MP3 编码器</div></div>
+            <div class="check-result" id="envResult" data-page-node-id="ELuz4hPUsouQoA29K3FDeq"><span data-page-node-id="KypvAGBvlHnZ4DEUOicC8N">未检查</span></div>
+            <span class="btn-mini" id="btnEnv" data-page-node-id="kRRImSsEFzLaYIqzR1MUQJ">立即检查</span></div>
+          <div class="gi" data-page-node-id="QmCiWoZgu0c0qrWqK5UK7J"><div class="txt" data-page-node-id="8SZUMgB9FIUu0VgDGTtPrq"><div class="k" data-page-node-id="AVDwmqnE57YmPoh2koUyXL">诊断日志</div><div class="d" data-page-node-id="Vu2LliHeHp5Pt6FQtCED6g">导出最近一次会话的引擎日志用于排查</div></div><span class="btn-mini" data-page-node-id="Sigtzs07D3qZ1YfssQOzg8">导出</span></div>
+        </div>
+        <div class="group-t" data-page-node-id="WXCgpgL2Q4DsSL1nqQ67G6">外观</div>
+        <div class="group" data-page-node-id="1INhoAwh3ImXN8RU5rGc9s">
+          <div class="gi" data-page-node-id="IhF96d2ElK5Xe4TQqSMdph"><div class="txt" data-page-node-id="xp9G9W7e9ImYbpaC8nYUVO"><div class="k" data-page-node-id="nttAnT758vpCCWkXBD0JnF">主题</div><div class="d" data-page-node-id="aV7DZWCwMrDibryaiMF9kh">跟随系统深浅色切换</div></div>
+            <div class="seg" id="themeSeg" data-page-node-id="n2PFcocLjnIM49QpCeX9R1"><span class="on" data-th="system" data-page-node-id="ze8UThh8hkciNe0YA2550R">跟随系统</span><span data-th="light" data-page-node-id="RTnOzHvnLkdNo16ahpPSCz">浅色</span><span data-th="dark" data-page-node-id="Pccywv4gB1d9vnk3g68AL7">深色</span></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 环境引导遮罩（覆盖整个窗口） -->
+<div class="ov" id="ovEnv" data-page-node-id="iTp9XyoAPutGBC1h84wccd">
+  <div class="ov-card" data-page-node-id="jlYQJGpFnNUUhHdrtBLrn6">
+    <div class="ic" data-page-node-id="rE1JzI47afUtwGS0HfXef5">
+      <svg width="36" height="36" viewBox="0 0 24 24" data-page-node-id="xMf8MW23Sh0ueeazhdFW0u"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" data-page-node-id="4BUscQG1MXK4X53RvkXm8S"/><path d="M16.5 8.5a5 5 0 010 7" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" data-page-node-id="Jt1bhUjLhYVOzsuFkEQgAp"/></svg>
+    </div>
+    <h2 data-page-node-id="Arbd1yQNTFEigy0d6K1HVY">先装一个 BlackHole</h2>
+    <p data-page-node-id="RFPAthFyiOsV4YLltzCi67">macOS 不允许直接录别的应用的声音，BlackHole 是一个免费开源的虚拟声卡，装一次就好，之后不用再管。</p>
+    <div class="steps" data-page-node-id="pfyTumpjFxFGBCZzPFS4NV">
+      <div class="step" data-page-node-id="E6HBNOCx3ii0NUogc6dJHV"><span class="n" data-page-node-id="aiXxncnUCt63iYAh4c7d3K">1</span><div data-page-node-id="eg97AOUGluPv5hi02ZwbS0"><div class="k" data-page-node-id="X9WGAbkqGzCobg7S8fIgK8">下载 BlackHole 2ch</div><div class="d" data-page-node-id="KmJCDOXaHCsg9KD6uPA2N1">existential.audio 免费下载，无需付费</div></div></div>
+      <div class="step" data-page-node-id="FLMgD7DQGaANrKf0Mi292M"><span class="n" data-page-node-id="HH3EUAI4TNQiA8H6PvaOFI">2</span><div data-page-node-id="jM2Hf7FaZBN0D8ZCsupBNx"><div class="k" data-page-node-id="O018abGNiBqBVEtICdWged">双击安装，重启一次汽水音乐</div><div class="d" data-page-node-id="B1K23rLz0g4qBeZ3RkDNX9">让汽水识别到新的输出设备</div></div></div>
+      <div class="step" data-page-node-id="c59b9PSfNnOEtCPB1DRLOW"><span class="n" data-page-node-id="3cD7o5BqGwT3OKAdEAv9FL">3</span><div data-page-node-id="XA07qNg8fWeGoWG2kEelHr"><div class="k" data-page-node-id="sbu1Fjce1acRyplWAQiIOC">回到乐府，点「重新检查」</div><div class="d" data-page-node-id="uQQOp1v10onvIjyqCJ8ZPj">三项全绿就能开始采诗了</div></div></div>
+    </div>
+    <div class="controls" style="padding-top:4px" data-page-node-id="wwUxwp8emqjRBOSN31Zp0A">
+      <button class="pill" id="btnEnvSkip" data-page-node-id="KhtftNoDN7zQmltmPbI1kL">稍后再说</button>
+      <button class="pill primary" id="btnEnvRecheck" data-page-node-id="hRx9Smno0gVP3W8AxyjDLO">已装好，重新检查</button>
+    </div>
+  </div>
+</div>
+
+<div class="demo-bar" data-page-node-id="oPLAlVyanMg9ycMpVogiN7">
+  <span style="opacity:.65" data-page-node-id="Rkjo8WGHU4RieWeuwhObgf">原型演示</span>
+  <div class="seg" id="demoTheme" data-page-node-id="BxbBIzVP54yYf2EuXjs6vG"><span class="on" data-th="dark" data-page-node-id="1IATlftm4jNeWUBoDRlNs5">深色</span><span data-th="light" data-page-node-id="7l5IJFObqN05OJDcHLzW9b">浅色</span></div>
+  <span style="opacity:.4" data-page-node-id="GXtl9AVKfRHEPKXXWyhKLE">|</span>
+  <div class="seg" id="demoState" data-page-node-id="CdFRyHc2Kd5l7X8rD0MQRN">
+    <span data-st="idle" data-page-node-id="NpHX415oNry1YHr9iN03Af">待机</span>
+    <span class="on" data-st="live" data-page-node-id="Z7uFq8f1xauVn1iwFtyAGa">采录中</span>
+    <span data-st="cutting" data-page-node-id="BPBRM2g3dvugqddMtUZ9Rv">收卷裁曲中</span>
+    <span data-st="done" data-page-node-id="XxGmLHSKIC9S6smwHc7tTF">本次完成</span>
+    <span data-st="env" data-page-node-id="ncEUFeZmhOt4Xz3MwwpjAU">环境引导</span>
+  </div>
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const SONGS = [
+  {t:"言不由衷", a:"克里、丝绒月亮", v:"遗憾live版", dur:250, cov:"--cover1"},
+  {t:"不知不觉就长大了", a:"文思闵", v:"", dur:153, cov:"--cover2"},
+  {t:"短发", a:"梁咏琪", v:"Live", dur:247, cov:"--cover3"},
+  {t:"你爱我坏", a:"风渡电台", v:"", dur:185, cov:"--cover4"},
+  {t:"该死的温柔", a:"马天宇", v:"", dur:224, cov:"--cover5"},
+  {t:"小时候总期盼自己快点长大", a:"杜芬舒斯", v:"", dur:178, cov:"--cover6"},
+  {t:"我是不是该安静的走开", a:"谢尔西", v:"烟嗓版", dur:239, cov:"--cover7"},
+  {t:"你看时间等过谁", a:"风听晚", v:"", dur:238, cov:"--cover8"},
+  {t:"你说你爱她", a:"向思思", v:"", dur:221, cov:"--cover9"},
+];
+const LYRICS = [
+  ["假使未来没有你在身边陪伴的时候","我一个人也能找到快乐"],
+  ["我一个人也能找到快乐","想起我们堆积成山的照片"],
+  ["想起我们堆积成山的照片","还有那些说不出口的再见"],
+  ["想起我们说过看不完的风景","言不由衷的那些年"],
+];
+const STATE_META = {idle:"空闲", live:"REC 00:00:00", cutting:"裁曲中", done:"本次完成", env:"空闲"};
+let cur = 8, recording = false, trackN = 9;
+const state = {}; SONGS.forEach((s,i)=>state[i] = i<8 ? (i===4?"skipped":"done") : "current");
+
+/* ================= 工具 ================= */
+const $ = s=>document.querySelector(s);
+const fmt = s=>Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0");
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),2200); }
+
+/* ================= 导航 ================= */
+const NAV_TITLE = {record:"采诗 · 录制", rework:"裁曲", settings:"设置"};
+document.querySelectorAll(".rail .item").forEach(it=>{
+  it.onclick=()=>{
+    document.querySelectorAll(".rail .item").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(x=>x.classList.remove("on"));
+    it.classList.add("active");
+    $("#page-"+it.dataset.page).classList.add("on");
+    $("#winTitle").textContent = "乐府 · " + NAV_TITLE[it.dataset.page];
+  };
+});
+
+/* ================= 主题 ================= */
+function setTheme(th){
+  document.documentElement.dataset.theme = th;
+  document.querySelectorAll("#demoTheme span,#themeSeg span").forEach(s=>s.classList.toggle("on", s.dataset.th===th));
+}
+document.querySelectorAll("#demoTheme span,#themeSeg span").forEach(s=>s.onclick=()=>setTheme(s.dataset.th));
+
+/* ================= 曲目列表 ================= */
+function badgeFor(st){
+  if(st==="rec") return '<span class="badge rec">● 采录中</span>';
+  if(st==="done") return '<span class="badge ok">✓ 已收录</span>';
+  return '<span class="badge skip">⏭ 库中已有 · 跳过</span>';
+}
+function renderRows(){
+  const box=$("#trackRows"); box.innerHTML="";
+  SONGS.forEach((s,i)=>{
+    const r=document.createElement("div");
+    r.className="row"+(state[i]==="current"?" current":"");
+    r.innerHTML=`<span class="idx">${String(i+1).padStart(2,"0")}</span>
+      <div class="mini" style="background:var(${s.cov})"></div>
+      <span class="name">${s.t}${s.v?` <span style="font-size:11px;color:var(--text3)">${s.v}</span>`:""}</span>
+      <span class="artist">${s.a}</span>
+      ${badgeFor(state[i])}`;
+    box.appendChild(r);
+  });
+  $("#trackCount").textContent=trackN;
+}
+renderRows();
+
+/* ================= 正在播放 ================= */
+function showSong(i){
+  const s=SONGS[i];
+  $("#npTitle").textContent=s.t;
+  $("#npSub").textContent=s.a+(s.v?" · "+s.v:"");
+  $("#npArt").style.background="var("+s.cov+")";
+  $("#npTime").textContent="0:00 / "+fmt(s.dur);
+  $("#npBar").style.width="0%";
+  $("#lyrCur").textContent=LYRICS[0][0];
+  $("#lyrNxt").textContent=LYRICS[0][1];
+}
+let lyrIdx=0, progTimer=null, lyrTimer=null, recTimer=null, sec=0, dur=SONGS[cur].dur;
+function startTimers(){
+  sec=0;
+  progTimer=setInterval(()=>{
+    sec++; if(sec>=dur){ nextTrack(); return; }
+    $("#npBar").style.width=(sec/dur*100)+"%";
+    $("#npTime").textContent=fmt(sec)+" / "+fmt(dur);
+  },1000);
+  lyrTimer=setInterval(()=>{
+    lyrIdx=(lyrIdx+1)%LYRICS.length;
+    $("#lyrCur").textContent=LYRICS[lyrIdx][0];
+    $("#lyrNxt").textContent=LYRICS[lyrIdx][1];
+  },4000);
+  recTimer=setInterval(()=>{
+    if(!recording) return;
+    secRec++;
+    $("#recText").textContent="REC "+fmtHMS(secRec);
+  },1000);
+}
+let secRec=0;
+function stopTimers(){ clearInterval(progTimer); clearInterval(lyrTimer); clearInterval(recTimer); }
+function fmtHMS(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0");}
+showSong(cur);
+
+/* ================= 波形 ================= */
+const wave=$("#wave"); const BARS=48;
+for(let i=0;i<BARS;i++){ const b=document.createElement("i"); b.style.height=(8+Math.random()*28)+"px"; wave.appendChild(b); }
+let waveTimer=null;
+function waveOn(){
+  wave.classList.add("playing");
+  waveTimer=setInterval(()=>{
+    [...wave.children].forEach(b=>{
+      const live=Math.random()<0.4; b.classList.toggle("live",live);
+      b.style.height=(live? 10+Math.random()*26 : 6+Math.random()*16)+"px";
+    });
+  },120);
+}
+function waveOff(){ clearInterval(waveTimer); wave.classList.remove("playing");
+  [...wave.children].forEach(b=>{b.classList.remove("live"); b.style.height=(8+Math.random()*22)+"px";}); }
+
+/* ================= 采诗状态机 ================= */
+let recState = "live";
+function setRecState(st){
+  if(st===recState && st!=="env") return;
+  const prev = recState;
+  recState = st;
+  ["idle","live","cutting","done"].forEach(k=>$("#sv-"+k).classList.toggle("on",k===st));
+  $("#ovEnv").classList.toggle("on",st==="env");
+  document.querySelectorAll("#demoState span").forEach(s=>s.classList.toggle("on",s.dataset.st===st));
+  $("#recText").textContent = STATE_META[st];
+  $("#recChip").classList.toggle("on", st==="live");
+  $("#recDot").style.display = st==="live" ? "block" : "none";
+
+  if(st==="live" && prev!=="live"){
+    recording=true; secRec=0; waveOn(); startTimers();
+  }
+  if(prev==="live" && st!=="live"){
+    recording=false; waveOff(); stopTimers();
+  }
+  if(st==="idle"){ runEnvChecks(); }
+  if(st==="cutting"){ runCutSimulation(); }
+  if(st==="live" && prev==="env"){ toast("环境就绪 ✓ 开始采诗吧"); }
+}
+document.querySelectorAll("#demoState span").forEach(s=>s.onclick=()=>setRecState(s.dataset.st));
+
+/* 待机 · 环境检查 */
+let envChecked=false;
+function runEnvChecks(){
+  const chips=[...document.querySelectorAll("#envChecks .env-chip")];
+  const names=["BlackHole 驱动","采诗通道","MP3 编码器"];
+  chips.forEach((c,i)=>{
+    c.className="env-chip"; c.innerHTML=`<span class="st"></span>${names[i]} 检查中…`;
+    setTimeout(()=>{
+      c.classList.add("ok");
+      c.innerHTML=`<span class="st"></span>${names[i]} ✓`;
+    },450*(i+1));
+  });
+  envChecked=true;
+}
+$("#btnStart").onclick=()=>setRecState("live");
+
+/* 环境引导 */
+let envFrom="idle";
+$("#btnEnvSkip").onclick=()=>setRecState(envFrom);
+$("#btnEnvRecheck").onclick=()=>{
+  setRecState("idle");
+  toast("环境检查通过 ✓");
+};
+document.querySelector("#demoState span[data-st='env']").addEventListener("click",()=>{ envFrom = recState==="env" ? "idle" : recState; });
+
+/* ================= 下一阕 ================= */
+function nextTrack(){
+  state[cur]="done";
+  cur=(cur+1)%SONGS.length;
+  if(state[cur]!=="done"&&state[cur]!=="skipped"){ trackN++; state[cur]="current"; }
+  else { state[cur]="current"; }
+  renderRows();
+  showSong(cur); dur=SONGS[cur].dur; lyrIdx=0; sec=0;
+  toast("已切换到下一阕");
+}
+$("#btnNext").onclick=nextTrack;
+
+/* ================= 收卷并裁曲 ================= */
+const PIPE=["切段","歌词","编码","标签"];
+$("#btnStop").onclick=()=>{
+  toast("收卷 ✓ 开始按时间轴裁曲");
+  setRecState("cutting");
+};
+
+/* 裁曲中：总体进度 + 每首四段管线 */
+let cutTimers=[];
+function runCutSimulation(){
+  cutTimers.forEach(clearTimeout); cutTimers=[];
+  const box=$("#cutPipe"); box.innerHTML="";
+  const cutSongs=SONGS.slice(0,7); // 本次采得 7 首（2 首跳过）
+  const total=SONGS.length;
+  $("#cutCount").textContent="0 / "+total+" 首";
+  cutSongs.forEach((s,i)=>{
+    const r=document.createElement("div"); r.className="row";
+    r.innerHTML=`<span class="idx">${String(i+1).padStart(2,"0")}</span>
+      <div class="mini" style="background:var(${s.cov})"></div>
+      <span class="name">${s.t}${s.v?` <span style="font-size:11px;color:var(--text3)">${s.v}</span>`:""}</span>
+      <span class="artist">${s.a}</span>
+      <div class="stages">${PIPE.map(()=>'<i class="st"></i>').join("")}</div>
+      <span class="badge" style="color:var(--text3)">排队中</span>`;
+    box.appendChild(r);
+    const stages=[...r.querySelectorAll(".st")], badge=r.querySelector(".badge");
+    cutTimers.push(setTimeout(()=>{
+      let k=0;
+      badge.textContent=PIPE[0]+"中…"; badge.style.color="var(--accent)";
+      stages[0].classList.add("run");
+      const iv=setInterval(()=>{
+        stages[k].classList.remove("run"); stages[k].classList.add("done");
+        k++;
+        $("#cutBar").style.width=((i+k/PIPE.length)/cutSongs.length*100)+"%";
+        $("#cutCount").textContent=Math.round((i+k/PIPE.length)/cutSongs.length*total)+" / "+total+" 首";
+        if(k<PIPE.length){ stages[k].classList.add("run"); badge.textContent=PIPE[k]+"中…"; }
+        else{ clearInterval(iv); badge.textContent="✓ 完成"; badge.style.color="var(--ok)"; }
+      },500);
+    }, 1500*i));
+  });
+  // 全部完成后进入「本次完成」
+  cutTimers.push(setTimeout(()=>{ if(recState==="cutting") setRecState("done"); }, 1500*cutSongs.length + 2200));
+}
+
+/* ================= 本次完成 ================= */
+function renderDone(){
+  const got=SONGS.filter((s,i)=>state[i]!=="skipped");
+  const box=$("#doneRows"); box.innerHTML="";
+  got.forEach((s,i)=>{
+    const r=document.createElement("div"); r.className="row";
+    r.innerHTML=`<span class="idx">${String(i+1).padStart(2,"0")}</span>
+      <div class="mini" style="background:var(${s.cov})"></div>
+      <span class="name">${s.t}${s.v?` <span style="font-size:11px;color:var(--text3)">${s.v}</span>`:""}</span>
+      <span class="artist">${s.a}</span>
+      <span class="badge ok">✓ MP3 320k</span>
+      <span class="size">${(3.2+Math.random()*3.5).toFixed(1)} MB</span>`;
+    box.appendChild(r);
+  });
+  $("#doneStats").textContent=`采得 ${got.length} 首 · ${(got.length*4.7).toFixed(1)} MB · 共 ${Math.round(got.reduce((a,s)=>a+s.dur,0)/60)} 分钟`;
+}
+renderDone();
+$("#btnOpenDir").onclick=()=>toast("已在访达中打开 ~/Music/乐府/2026-09-08");
+$("#btnAgain").onclick=()=>{ setRecState("live"); toast("新的采诗场开始了"); };
+
+/* ================= 裁曲页 ================= */
+const PIPE2=["切段","歌词","编码","标签"];
+let tasks=[];
+function demoTasks(){
+  tasks=[
+    {name:"小时候总期盼自己快点长大",artist:"杜芬舒斯"},
+    {name:"我是不是该安静的走开",artist:"谢尔西",ver:"烟嗓版"},
+    {name:"你爱我坏",artist:"风渡电台"},
+  ];
+  renderPipes();
+}
+function renderPipes(){
+  const box=$("#pipeRows"); box.innerHTML="";
+  tasks.forEach((tk,i)=>{
+    const r=document.createElement("div"); r.className="row";
+    r.innerHTML=`<span class="idx">${String(i+1).padStart(2,"0")}</span>
+      <span class="name">${tk.name}${tk.ver?` <span style="font-size:11px;color:var(--text3)">${tk.ver}</span>`:""}</span>
+      <span class="artist">${tk.artist}</span>
+      <div class="stages">${PIPE2.map(()=>'<i class="st"></i>').join("")}</div>
+      <span class="badge" style="color:var(--text3)">排队中</span>`;
+    box.appendChild(r); tk.el=r;
+  });
+}
+$("#btnDemoFill").onclick=demoTasks;
+$("#btnRework").onclick=()=>{
+  if(!tasks.length){ toast("先点「载入示例任务」"); return; }
+  tasks.forEach((tk,i)=>runPipe(tk,i*2600));
+};
+function runPipe(tk,delay){
+  setTimeout(()=>{
+    const stages=[...tk.el.querySelectorAll(".st")];
+    const badge=tk.el.querySelector(".badge");
+    let k=0;
+    badge.textContent=PIPE2[0]+"中…"; badge.style.color="var(--accent)";
+    stages[0].classList.add("run");
+    const iv=setInterval(()=>{
+      stages[k].classList.remove("run"); stages[k].classList.add("done");
+      k++;
+      if(k<PIPE2.length){ stages[k].classList.add("run"); badge.textContent=PIPE2[k]+"中…"; }
+      else{ clearInterval(iv); badge.textContent="✓ 完成"; badge.style.color="var(--ok)"; }
+    },600);
+  },delay);
+}
+$("#drop").onclick=()=>{ demoTasks(); toast("已载入 1 个录音任务（示例）"); };
+
+/* ================= 设置 ================= */
+document.querySelectorAll("[data-sw]").forEach(sw=>sw.onclick=()=>sw.classList.toggle("on"));
+document.querySelectorAll(".seg[data-set]").forEach(seg=>{
+  seg.querySelectorAll("span").forEach(sp=>sp.onclick=()=>{
+    seg.querySelectorAll("span").forEach(x=>x.classList.remove("on")); sp.classList.add("on");
+    if(seg.dataset.set==="minLen") $("#minLenV").textContent=sp.textContent+" 秒";
+  });
+});
+$("#btnEnv").onclick=()=>{
+  const items=["BlackHole 驱动","正在播放通道","MP3 编码器"];
+  const box=$("#envResult"); box.innerHTML="";
+  items.forEach((n,i)=>{
+    const sp=document.createElement("span"); sp.textContent=n+" 检查中…"; box.appendChild(sp);
+    setTimeout(()=>{ sp.textContent=n+" ✓"; sp.classList.add("ok"); },400*(i+1));
+  });
+};
+</script>
+</body>
+</html>
