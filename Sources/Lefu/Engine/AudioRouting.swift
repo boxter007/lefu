@@ -3,12 +3,14 @@ import CoreAudio
 import Foundation
 
 // MARK: - 采诗通道（多输出设备）配置
-// 目标：汽水放歌 → "乐府 采诗通道"(音频 MIDI 设置手工建的多输出设备) → 同时进 BlackHole（乐府录）和扬声器（人听）
+// 目标：汽水放歌 → "乐府 通道"(音频 MIDI 设置手工建的多输出设备) → 同时进 BlackHole（乐府录）和扬声器（人听）
 // 实测（2026-09-09）：程序化 AudioHardwareCreateAggregateDevice 建不出真·多输出（哪怕带
 // kAudioAggregateDeviceIsStackedKey 也是通道拼接，立体声只进主时钟子设备），AMS 的多输出是私有实现。
 // 因此本模块只做「复用 + 切默认输出」，设备本体由音频 MIDI 设置手工创建（仅一次，持久生效）。
+// 命名沿革：正式发布（2026-09-10）由「乐府 采诗通道」更名「乐府 通道」，旧名继续兼容（老用户已建的设备照常识别）。
 enum AudioRouting {
-    static let aggregateName = "乐府 采诗通道"
+    static let aggregateName = "乐府 通道"
+    static let legacyAggregateName = "乐府 采诗通道"
 
     // MARK: 设备探测
     private static func allDevices() -> [AudioDeviceID] {
@@ -83,10 +85,11 @@ enum AudioRouting {
         return nil
     }
 
-    /// 是否已存在"乐府 采诗通道"聚合设备
+    /// 是否已存在「乐府 通道」聚合设备（新名 / 发布前旧名都认，老用户零迁移成本）
     static func existingAggregate() -> AudioDeviceID? {
-        for id in allDevices() where deviceName(id) == aggregateName {
-            return id
+        for id in allDevices() {
+            let n = deviceName(id)
+            if n == aggregateName || n == legacyAggregateName { return id }
         }
         return nil
     }
@@ -165,7 +168,7 @@ enum AudioRouting {
                 for id in ids where deviceName(id).hasPrefix("BlackHole") { return true }
             }
         }
-        return deviceName(cur) == aggregateName
+        return deviceName(cur) == aggregateName || deviceName(cur) == legacyAggregateName
     }
 
     // MARK: 实时监听

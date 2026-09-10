@@ -58,7 +58,7 @@ enum LyricsFetcher {
         guard let url = comps.url else { return nil }
         var req = URLRequest(url: url)
         req.timeoutInterval = 6
-        req.setValue("Lefu/1.0 (personal archiver)", forHTTPHeaderField: "User-Agent")
+        req.setValue("Lefu/1.0 (open-source Mac archiver)", forHTTPHeaderField: "User-Agent")
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
               (resp as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]

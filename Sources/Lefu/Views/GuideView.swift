@@ -28,8 +28,8 @@ struct GuideView: View {
                 sectionTitle("它怎么工作")
                 principleCard
                 sectionTitle("常见问题")
-                faqCard("录出来是静音？", "放音路由没接通。系统输出必须是「乐府 采诗通道」多输出设备。看本页顶部的「采诗通道」卡：状态徽章显示未接通时，按卡里的三步建好，状态会实时变绿。")
-                faqCard("听不见歌了？", "说明系统输出被切到了 BlackHole 本体（虚拟黑洞，无声）或别的设备。到系统设置（或音频 MIDI 设置）把输出切回「乐府 采诗通道」，乐府的放音路由状态会实时恢复绿灯。")
+                faqCard("录出来是静音？", "放音路由没接通。系统输出必须是「乐府 通道」多输出设备。看本页顶部的「采诗通道」卡：状态徽章显示未接通时，按卡里的三步建好，状态会实时变绿。")
+                faqCard("听不见歌了？", "说明系统输出被切到了 BlackHole 本体（虚拟黑洞，无声）或别的设备。到系统设置（或音频 MIDI 设置）把输出切回「乐府 通道」，乐府的放音路由状态会实时恢复绿灯。")
                 faqCard("歌词是空的？", "歌词按 自家缓存 → 汽水本地缓存 → LRCLIB → 网易云 顺序抓取。纯器乐或小众歌可能全网没有；联网抓到过的歌会存进缓存，之后离线也有。")
                 faqCard("需要装什么软件？", "什么都不用。MP3 编码器（LAME）已内置在 App 里，歌词零依赖，BlackHole 会引导你安装。")
                 faqCard("汽水没开播会怎样？", "开着挂机监听它就一直待命；没开播时菜单栏面板显示「府中清静」。挂机监听关着的话，点开始采诗才会录。")
@@ -117,7 +117,7 @@ struct GuideView: View {
                     .foregroundColor(th.text)
                 routeStep(1, icon: "plus.app", text: "打开音频 MIDI 设置，点左下角 ＋ → 创建多输出设备")
                 routeStep(2, icon: "checkmark.square", text: "勾选 Mac mini扬声器 和 BlackHole 2ch；主设备选扬声器；BlackHole 勾上「漂移修正」")
-                routeStep(3, icon: "character.cursor.ibeam", text: "左侧双击改名为「乐府 采诗通道」（一字不差）——建好乐府自动认出，状态实时变绿")
+                routeStep(3, icon: "character.cursor.ibeam", text: "左侧双击改名为「乐府 通道」（一字不差）——建好乐府自动认出，状态实时变绿")
             }
 
             Button {
@@ -230,7 +230,7 @@ struct GuideView: View {
     // MARK: 原理卡
     private var principleCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            flowRow(icon: "music.note", title: "汽水音乐", desc: "正常放歌，输出走「乐府 采诗通道」")
+            flowRow(icon: "music.note", title: "汽水音乐", desc: "正常放歌，输出走「乐府 通道」")
             arrowDown
             HStack(spacing: 10) {
                 flowNode(icon: "waveform.badge.plus", title: "BlackHole", desc: "乐府从这里录", tint: th.live)

@@ -3,11 +3,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "Lefu",
+    name: "乐府",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "Lefu",
+            name: "乐府",
             path: "Sources/Lefu"
         )
     ]

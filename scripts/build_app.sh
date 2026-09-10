@@ -13,7 +13,9 @@ echo "== 2. 组装 .app 结构 =="
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
 mkdir -p "$APP/Contents/Resources/zh-Hans.lproj" "$APP/Contents/Resources/en.lproj"
-cp .build/release/Lefu "$APP/Contents/MacOS/Lefu"
+BIN=".build/release/乐府"
+[ -f "$BIN" ] || BIN=".build/release/Lefu"   # 兼容旧 target 名的本地缓存
+cp "$BIN" "$APP/Contents/MacOS/乐府"
 
 # App 图标
 ICON="design/AppIcon.icns"
@@ -38,10 +40,10 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleExecutable</key><string>Lefu</string>
+    <key>CFBundleExecutable</key><string>乐府</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>com.jingjing.lefu</string>
-    <key>CFBundleName</key><string>Lefu</string>
+    <key>CFBundleName</key><string>乐府</string>
     <key>CFBundleDisplayName</key><string>乐府</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
