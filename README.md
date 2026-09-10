@@ -1,6 +1,32 @@
+<div align="center">
+  <img src="docs/banner.png" alt="乐府 Lefu — 汽水音乐 Mac 内录自动裁曲工具" width="100%">
+</div>
+
 # 乐府 Lefu — 汽水音乐 Mac 内录自动裁曲工具
 
+[![Release](https://img.shields.io/github/v/release/boxter007/lefu?color=e8555f&label=release)](https://github.com/boxter007/lefu/releases)
+[![License](https://img.shields.io/badge/license-MIT-3fb950)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-378add)](#环境要求)
+[![Swift](https://img.shields.io/badge/Swift-5.9-fa7343)](Package.swift)
+[![Stars](https://img.shields.io/github/stars/boxter007/lefu?color=e8555f&label=stars)](https://github.com/boxter007/lefu/stargazers)
+
 **乐府（英文名 Lefu）是一款开源免费的 macOS 应用：在 Mac 上边听汽水音乐，边按歌自动录制、裁曲、入库，每首歌自动保存为内嵌封面与标签的 MP3，并附带同步 `.lrc` 歌词文件。** 纯 Swift / SwiftUI 原生开发，无需事后剪辑，切歌即出片，MIT 协议开源。
+
+## 立即开始
+
+| 方式 | 命令 / 链接 |
+|---|---|
+| 下载安装包 | [Releases](https://github.com/boxter007/lefu/releases/latest) → 下载 `Lefu-v1.0.0.zip`（通用二进制，解压拖入 Applications） |
+| Homebrew | `brew install --cask boxter007/lefu/lefu` |
+| 自行构建 | 见下方[构建运行](#构建运行) |
+
+三步跑通：装 [BlackHole 2ch](https://existential.audio/blackhole/)（App 内一键装）→ 音频 MIDI 设置里建一次「乐府 通道」多输出设备（30 秒）→ 状态变绿，开始采诗。App 内「指南」页有全程引导。
+
+## 界面预览
+
+| 采诗主界面 | 三步上手指南 |
+|---|---|
+| ![采诗主界面](docs/screenshots/01-capture.png) | ![三步上手指南](docs/screenshots/02-guide.png) |
 
 ## 项目信息速览
 
@@ -125,6 +151,22 @@ LAME 320kbps CBR，与源音频同为 44.1kHz 采样率，内嵌 ID3v2.3 封面�
 
 - [LAME](https://lame.sourceforge.io/)（LGPL）—— MP3 编码，随 App 分发 `libmp3lame.dylib`，依 LGPL 2.0/3.0 之授权分发，源码见 [lame.sourceforge.io](https://lame.sourceforge.io/)
 - [BlackHole](https://existential.audio/blackhole/) —— 存在性音频的虚拟声卡（GPLv3），由 App 运行时引导用户从官方渠道安装，本仓库不分发其本体
+
+## 参与贡献
+
+欢迎提 Issue 和 PR。动手之前请先读一遍 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+- **报 Bug**：附上 macOS 版本、汽水音乐版本、复现步骤，以及 `~/Music/乐府` 下的现象说明
+- **提功能**：先讲使用场景，再讲你想怎么实现
+- **改代码**：从标了 `good first issue` 的 issue 入手最省事
+
+## Star 趋势
+
+[![Star History Chart](https://api.star-history.com/svg?repos=boxter007/lefu&type=Date)](https://star-history.com/#boxter007/lefu&Date)
+
+## 支持项目
+
+如果乐府帮到了你，**给个 Star** 是最实在的支持——它能让更多在 Mac 上听歌的人找到这个工具。也欢迎把这篇文章转给有同样需要的朋友。
 
 ## License
 

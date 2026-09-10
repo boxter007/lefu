@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用问题与讨论
+    url: https://github.com/boxter007/lefu/discussions
+    about: 配置「乐府 通道」、歌词抓取、输出目录等使用向疑问，请到 Discussions
+  - name: 下载与安装说明
+    url: https://github.com/boxter007/lefu#立即开始
+    about: 安装包在哪下、怎么跑通三步环境
