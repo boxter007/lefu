@@ -103,7 +103,7 @@ final class Cutter {
         let pcm = try readSegment(start: start, end: end)
         Diag.log("CUT [\(task.id)] 切段完毕 samples=\(pcm.count) \(Diag.since(tSlice))")
 
-        // 纯静音段：峰值低于 -50dB 视为没在放歌（与 engine/soda_split_v2.py 同规则）
+        // 纯静音段：峰值 < 110（满幅 32767 约 -50dB）视为没在放歌
         var peak = 0
         for s in pcm {
             let v = s < 0 ? -Int(s) : Int(s)
