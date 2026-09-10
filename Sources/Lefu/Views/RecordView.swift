@@ -47,6 +47,7 @@ struct RecordView: View {
     @State private var haloOn = false
     @State private var ringHover = false
     @State private var guideDismissed = false
+    @State private var previousTrackRowCount = 0   // 曲目列表自动滚底：记录上一次行数
     private var idleView: some View {
         VStack(spacing: 6) {
             startRing
@@ -338,10 +339,23 @@ struct RecordView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
                 } else {
-                    ScrollView {
-                        VStack(spacing: 5) {
-                            ForEach(session.trackRows) { row in
-                                trackRow(row)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 5) {
+                                ForEach(session.trackRows) { row in
+                                    trackRow(row)
+                                        .id(row.id)
+                                }
+                            }
+                        }
+                        .onChange(of: session.trackRows.count) { newCount in
+                            // 新增行后自动滚到最底部的新行；仅在增长时触发（防收卷统计回写误滚）
+                            guard newCount > previousTrackRowCount else { return }
+                            previousTrackRowCount = newCount
+                            if let last = session.trackRows.last {
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    proxy.scrollTo(last.id, anchor: .bottom)
+                                }
                             }
                         }
                     }
@@ -465,13 +479,22 @@ struct RecordView: View {
         return base + noise + live * (i % 3 == 0 ? 1 : 0.6)
     }
 
+    // 序号列宽：随最大序号位数自适应（2 位 20pt，100+ 首时 3 位也不换行；所有行同宽不错位）
+    private var seqColumnWidth: CGFloat {
+        let maxID = session.trackRows.map(\.id).max() ?? 0
+        let digits = max(2, String(maxID).count)
+        return max(20, CGFloat(digits) * 7.4 + 2)
+    }
+
     // 曲目行（参考图样式：缩略图 + 序号 + 歌名 + 歌手 + 状态，行高加大）
     private func trackRow(_ row: TrackRow) -> some View {
         HStack(spacing: 12) {
             Text(String(format: "%02d", row.id))
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundColor(th.text2)
-                .frame(width: 20, alignment: .leading)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(width: seqColumnWidth, alignment: .leading)
             // 封面缩略图
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
