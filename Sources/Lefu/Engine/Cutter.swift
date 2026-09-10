@@ -181,15 +181,23 @@ final class Cutter {
             let fb = settings.lyricFallback
             let cacheDir = settings.resolvedOutputDir.appendingPathComponent(".lyrics")
             let tLrc = Date()
+            // Sendable 域检查兼容（Swift 5.10+）：@Sendable 闭包不许捕获可变局部变量，
+            // 用 let 快照 + final class 引用盒传值
+            let entryTitle = task.entry.title
+            let entryArtist = task.entry.artist
+            let entryId = task.id
+            final class RefBox { var value: String? = nil }
+            let box = RefBox()
             Task {
-                lrcData = await LyricsFetcher.fetchLRC(
-                    title: task.entry.title, artist: task.entry.artist,
+                box.value = await LyricsFetcher.fetchLRC(
+                    title: entryTitle, artist: entryArtist,
                     duration: effective, offline: offline, fallback: fb, cacheDir: cacheDir)
-                Diag.log("CUT [\(task.id)] 歌词抓取返回 got=\(lrcData != nil) \(Diag.since(tLrc))")
+                Diag.log("CUT [\(entryId)] 歌词抓取返回 got=\(box.value != nil) \(Diag.since(tLrc))")
                 sema.signal()
             }
             let timedOut = sema.wait(timeout: .now() + 8) == .timedOut
-            Diag.log("CUT [\(task.id)] 歌词等待结束 timedOut=\(timedOut) \(Diag.since(tLrc))")
+            Diag.log("CUT [\(entryId)] 歌词等待结束 timedOut=\(timedOut) \(Diag.since(tLrc))")
+            lrcData = box.value
         }
         if let lrc = lrcData {
             try? lrc.write(to: outDir.appendingPathComponent(safeName + ".lrc"), atomically: true, encoding: .utf8)

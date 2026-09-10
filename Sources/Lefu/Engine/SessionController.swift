@@ -192,39 +192,45 @@ final class SessionController: ObservableObject {
     // MARK: 环境自检
     func runEnvCheck() {
         for i in envChecks.indices { envChecks[i].status = .checking; envChecks[i].note = "" }
+        // Sendable 域检查兼容（Swift 5.10+）：@Sendable 闭包不许捕获 weak var self，
+        // 统一先落成 let 引用再进 Task
         // BlackHole
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            let box = self
             Task { @MainActor in
                 if AudioCapture.findBlackHole() != nil {
-                    self?.setEnv("blackhole", .ok)
+                    box?.setEnv("blackhole", .ok)
                 } else {
-                    self?.setEnv("blackhole", .fail, note: "未安装")
+                    box?.setEnv("blackhole", .fail, note: "未安装")
                 }
             }
         }
         // 采诗通道（正在播放）
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.45) { [weak self] in
             let info = NowPlayingMonitor.fetch()
+            let box = self
             Task { @MainActor in
-                if info != nil { self?.setEnv("channel", .ok) }
-                else { self?.setEnv("channel", .fail, note: "拿不到正在播放") }
+                if info != nil { box?.setEnv("channel", .ok) }
+                else { box?.setEnv("channel", .fail, note: "拿不到正在播放") }
             }
         }
         // MP3 编码器
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.75) { [weak self] in
+            let box = self
             Task { @MainActor in
-                if LameEncoder.available() { self?.setEnv("encoder", .ok) }
-                else { self?.setEnv("encoder", .fail, note: "缺 LAME，将回落 M4A") }
+                if LameEncoder.available() { box?.setEnv("encoder", .ok) }
+                else { box?.setEnv("encoder", .fail, note: "缺 LAME，将回落 M4A") }
             }
         }
         // 采诗通道（默认输出是否进 BlackHole）
         routeReady = AudioRouting.isDefaultOutputRouted()
         DispatchQueue.global().asyncAfter(deadline: .now() + 1.05) { [weak self] in
+            let box = self
             Task { @MainActor in
                 let ok = AudioRouting.isDefaultOutputRouted()
-                self?.routeReady = ok
-                if ok { self?.setEnv("route", .ok) }
-                else { self?.setEnv("route", .fail, note: "未接通") }
+                box?.routeReady = ok
+                if ok { box?.setEnv("route", .ok) }
+                else { box?.setEnv("route", .fail, note: "未接通") }
             }
         }
     }
@@ -319,14 +325,15 @@ final class SessionController: ObservableObject {
         monitor.start()
 
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            let box = self
             Task { @MainActor in
-                guard let self, self.state == .live else { return }
-                self.elapsed += 1
+                guard let box, box.state == .live else { return }
+                box.elapsed += 1
                 // 歌词行推进（按本歌在会话内的起始秒推算）
-                if let t = self.currentTrack, self.elapsed > 0 {
-                    let offset = self.elapsed - self.songStartElapsed
-                    if offset >= 0, !self.lyricLines.isEmpty {
-                        self.lyricIndex = LRCParser.currentLine(self.lyricLines, at: offset)
+                if let t = box.currentTrack, box.elapsed > 0 {
+                    let offset = box.elapsed - box.songStartElapsed
+                    if offset >= 0, !box.lyricLines.isEmpty {
+                        box.lyricIndex = LRCParser.currentLine(box.lyricLines, at: offset)
                     }
                 }
             }
@@ -712,8 +719,10 @@ final class SessionController: ObservableObject {
                 totalBytes: items.reduce(0) { $0 + $1.size },
                 recent: Array(items.prefix(12))
             )
+            // Sendable 域检查兼容（Swift 5.10+）：let 引用盒落成，再进 @Sendable Task
+            let box = self
             Task { @MainActor in
-                guard let s = self else { return }
+                guard let s = box else { return }
                 s.library = stats
                 // 封面异步回填：只提最近 12 首，只读 ID3 头不碰音频数据
                 DispatchQueue.global().async {
@@ -752,7 +761,8 @@ final class SessionController: ObservableObject {
         bgStallSince = nil
         bgLastElapsed = -1
         bgTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.bgPoll() }
+            let box = self
+            Task { @MainActor in box?.bgPoll() }
         }
         showToast("挂机监听已开启：开播自动采诗")
     }
@@ -768,9 +778,10 @@ final class SessionController: ObservableObject {
         // fetch 最长阻塞 0.8s，放后台线程，避免卡主线程
         DispatchQueue.global().async { [weak self] in
             let info = NowPlayingMonitor.fetch()
+            let box = self
             Task { @MainActor in
-                self?.bgBusy = false
-                self?.bgHandle(info)
+                box?.bgBusy = false
+                box?.bgHandle(info)
             }
         }
     }
