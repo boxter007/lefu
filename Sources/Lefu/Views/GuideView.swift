@@ -16,9 +16,9 @@ struct GuideView: View {
                     Button("查看环境自检") { session.runEnvCheck() }
                         .buttonStyle(.link).font(.system(size: 11))
                 }
-                stepCard(2, "开始采诗", "在汽水音乐里放歌，回到乐府点大圆环「开始采诗」。切歌会自动打点；想连续挂机就打开「挂机监听」，开播自动采、停播自动收卷。") {
+                stepCard(2, "开始采诗", "在汽水音乐里放歌，回到乐府点大圆环「开始采诗」。切歌会自动实时裁歌入库；想连续挂机就打开「挂机监听」，开播自动采、停播自动收卷。") {
                     if session.state == .live {
-                        Button("收卷并裁曲") { session.stopAndCut() }
+                        Button("收卷") { session.stopAndCut() }
                             .buttonStyle(.link).font(.system(size: 11))
                     } else {
                         Button("开始采诗") { session.startSession() }

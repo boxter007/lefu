@@ -352,7 +352,7 @@ struct RecordView: View {
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(th.panel.opacity(0.55)))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(th.border, lineWidth: 0.5))
 
-            // ③ 操作栏：紧贴队列，主操作居中
+            // ③ 操作栏：紧贴队列，主操作居中（裁曲已实时进行，收卷=停录+尾首入流水线）
             HStack(spacing: 12) {
                 Button {
                     session.nextTrack()
@@ -365,18 +365,10 @@ struct RecordView: View {
                 Button {
                     session.stopAndCut()
                 } label: {
-                    Label("收卷并裁曲", systemImage: "stop.fill")
+                    Label("收卷", systemImage: "stop.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PillStyle(theme: th, kind: .danger))
-
-                Button {
-                    session.endSession()
-                } label: {
-                    Label("结束采录", systemImage: "stop.circle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PillStyle(theme: th, kind: .normal))
             }
         }
         .padding(18)
@@ -508,22 +500,17 @@ struct RecordView: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 10)
-            // 裁曲工序进度（切歌后实时：切段中…/编码中…/✓ 完成）
-            if !row.stageLabel.isEmpty {
-                Text(row.stageLabel)
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-                    .foregroundColor(stageColor(row))
-            }
+            // 右缘信息：采录中→播放进度/总时长；已收录→大小·时长；其余→工序进度
+            rowTrailing(row)
             statusBadge(row.status)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 12).fill(th.panel))
-        .overlay(alignment: .leading) {
+        // 采录中的行：半透明薄框呼吸描边（自持动画生命周期，行中途出现也能动起来）
+        .overlay {
             if row.status == .recording {
-                Rectangle().fill(th.accent).frame(width: 2)
-                    .clipShape(RoundedRectangle(cornerRadius: 1))
+                BreathingStroke(color: th.accent)
             }
         }
         .contentShape(Rectangle())
@@ -534,6 +521,53 @@ struct RecordView: View {
             }
         }
         .help(row.outputPath != nil ? "点击在 Finder 中显示成品" : "点击在 Finder 中显示本首录音")
+    }
+
+    /// 行右缘信息文字
+    @ViewBuilder
+    private func rowTrailing(_ row: TrackRow) -> some View {
+        switch row.status {
+        case .recording:
+            // 半路接入（本场第一首）：录制起点在歌中途，汽水不暴露播放位置，绝对进度不可知
+            if row.midJoin {
+                Text("--:-- / \(durText)")
+                    .font(.system(size: 11, design: .rounded).monospacedDigit())
+                    .foregroundColor(th.text3)
+            } else {
+                // 切歌打点的歌从 0 播：采录时长 + 确认前已播的头，夹在总时长内
+                Text("\(mmss(songPos)) / \(durText)")
+                    .font(.system(size: 11, design: .rounded).monospacedDigit())
+                    .foregroundColor(th.accent.opacity(0.9))
+            }
+        case .captured:
+            Text(row.sizeBytes > 0 ? "✓ \(mbStr(row.sizeBytes)) · \(mmss(row.seconds))" : "✓ 完成")
+                .font(.system(size: 11, design: .rounded).monospacedDigit())
+                .foregroundColor(th.ok)
+        default:
+            if !row.stageLabel.isEmpty {
+                Text(row.stageLabel)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .foregroundColor(stageColor(row))
+            }
+        }
+    }
+
+    private var durText: String {
+        guard let d = session.currentTrack?.duration, d > 0 else { return "--:--" }
+        return mmss(d)
+    }
+
+    /// 歌曲播放位置：采录时长 + 确认前已播的头；元信息总时长已知时夹在以内（防半路接入时超出总时长）
+    private var songPos: Double {
+        let pos = session.songOffset
+        if let d = session.currentTrack?.duration, d > 0 { return min(pos, d) }
+        return pos
+    }
+
+    private func mmss(_ t: Double) -> String {
+        let s = max(0, Int(t))
+        return String(format: "%02d:%02d", s / 60, s % 60)
     }
 
     /// 进度文字颜色：完成绿 / 跳过灰绿 / 失败红 / 进行中珊瑚红
@@ -995,6 +1029,19 @@ struct RecordView: View {
         }
         .allowsHitTesting(false)
         .transition(.opacity)
+    }
+}
+
+// MARK: - 呼吸描边（采录中行的半透明薄框：透明度缓慢起伏，自持动画）
+struct BreathingStroke: View {
+    let color: Color
+    @State private var on = false
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .stroke(color.opacity(on ? 0.75 : 0.12), lineWidth: 1)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { on = true }
+            }
     }
 }
 

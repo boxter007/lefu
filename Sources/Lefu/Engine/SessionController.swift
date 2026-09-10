@@ -25,6 +25,9 @@ struct TrackRow: Identifiable {
     var stageLabel: String = ""   // 裁曲工序实时进度（切段中…/编码中…/✓ 完成），切歌后写回
     var outputPath: String? = nil // 成品 MP3 路径（编码完成后回填，点击行开 Finder）
     var wavPath: String? = nil    // 本首所在录音 WAV（成品未落时点击先定位录音）
+    var sizeBytes: Int64 = 0      // 成品大小（已收录后回填，行内展示）
+    var seconds: Double = 0       // 成品时长秒（收卷统计时回填，行内展示）
+    var midJoin: Bool = false     // 半路接入（本场第一首歌，录制起点在歌中途，绝对进度不可知）
 }
 
 // MARK: - 环境检查项
@@ -115,6 +118,7 @@ final class SessionController: ObservableObject {
     private var pendingEntries: [TimelineEntry] = []   // 当前文件内的时间轴（换文件失败时同文件多首）
     private var pendingRowIDs: [Int] = []         // 与 pendingEntries 对应的行号（编码完成后回填状态）
     private var songStartElapsed = 0.0            // 当前歌在会话内的起始秒（歌词推进用）
+    private var songLeadSeconds = 0.0             // 确认前歌已播的秒数（候选首见→确认的差值；进度显示用——歌不是从确认瞬间才开始的）
     // 确认器（核心设计：歌名必须连续稳定出现才确认，确认之前不做任何不可逆操作）
     private var currentStableTitle = ""           // 已确认正在采录的歌名
     private var pendingTitle = ""                 // 观察中的候选歌名（可能是一拍即逝的切歌抖动）
@@ -334,6 +338,8 @@ final class SessionController: ObservableObject {
 
     // MARK: 确认新歌（确认器达到稳定线后调用，单次顺序执行；无任何去重/残影守卫——确认器天然去抖）
     private func confirmTrack(_ info: TrackInfo) {
+        // 记账：候选首见→确认的差值 = 确认前歌已播的头（拍间隔 1s + 确认线 2 拍 ≈ 1.5~2.5s）
+        songLeadSeconds = pendingFirstSeenAt.map { min(5, max(0, Date().timeIntervalSince($0))) } ?? 0
         currentStableTitle = info.title
         pendingTitle = ""
         pendingStableCount = 0
@@ -348,9 +354,12 @@ final class SessionController: ObservableObject {
         // ② 新行入列（库中已有 → 跳过徽章）
         let exists = Self.existsInLibrary(name: info.title, dir: settings.resolvedOutputDir)
         rowID += 1
+        // 本场第一首歌 = 半路接入：录制起点落在歌的中途（挂机半路拉起 / 用户中途点开始），
+        // 汽水不暴露播放位置，绝对进度不可知——行内进度显示 --:--
         trackRows.append(TrackRow(id: rowID, title: info.title, artist: info.artist, album: info.album,
                                   status: exists ? .skipped : .recording,
-                                  artwork: info.artwork.flatMap { NSImage(data: $0) }))
+                                  artwork: info.artwork.flatMap { NSImage(data: $0) },
+                                  midJoin: pendingEntries.isEmpty))
 
         // ③ 换文件 + 收卷上一文件（首首歌沿用开录建好的 song-001，不换）
         let rotate = !pendingEntries.isEmpty
@@ -501,6 +510,7 @@ final class SessionController: ObservableObject {
                 case .done:
                     self.trackRows[r].status = .captured
                     self.trackRows[r].outputPath = task.outputPath
+                    self.trackRows[r].sizeBytes = task.sizeBytes
                     self.refreshLibrary()
                 case .skipped:
                     self.trackRows[r].status = .skipped
@@ -552,7 +562,10 @@ final class SessionController: ObservableObject {
                     // 上一场的行多半已被清空，找不到就自然跳过）——这一步是「收卷中」卡死的最终兜底
                     if i < rowIDs.count, let r = self.trackRows.firstIndex(where: { $0.id == rowIDs[i] }) {
                         switch task.stage {
-                        case .done: self.trackRows[r].status = .captured
+                        case .done:
+                            self.trackRows[r].status = .captured
+                            self.trackRows[r].sizeBytes = task.sizeBytes
+                            self.trackRows[r].seconds = dur
                         case .skipped: self.trackRows[r].status = .skipped
                         case .failed: self.trackRows[r].stageLabel = task.stageLabel
                         default: break
@@ -806,6 +819,8 @@ final class SessionController: ObservableObject {
         let h = Int(elapsed) / 3600, m = Int(elapsed) % 3600 / 60, s = Int(elapsed) % 60
         return String(format: "%02d:%02d:%02d", h, m, s)
     }
+    /// 当前歌已播放的秒数 = 本歌采录时长 + 确认前已播的头（进度显示用）
+    var songOffset: Double { max(0, elapsed - songStartElapsed + songLeadSeconds) }
 }
 
 // MARK: - MP3 内嵌封面提取（配套 ID3Writer 的 v2.3，兼容 v2.4）

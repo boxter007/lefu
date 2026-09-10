@@ -8,13 +8,11 @@ struct RootView: View {
 
     enum Page: String, CaseIterable {
         case record = "采诗"
-        case rework = "裁曲"
         case settings = "设置"
         case guide = "指南"
         var title: String {
             switch self {
             case .record: return "采诗 · 录制"
-            case .rework: return "裁曲"
             case .settings: return "设置"
             case .guide: return "指南"
             }
@@ -22,7 +20,6 @@ struct RootView: View {
         var icon: String {
             switch self {
             case .record: return "record.circle"
-            case .rework: return "scissors"
             case .settings: return "gearshape"
             case .guide: return "book.pages"
             }
@@ -75,7 +72,6 @@ struct RootView: View {
                 ZStack {
                     switch page {
                     case .record: RecordView(settings: settings, session: session)
-                    case .rework: ReworkView(settings: settings, session: session)
                     case .settings: SettingsView(settings: settings, session: session)
                     case .guide: GuideView(settings: settings, session: session)
                     }
