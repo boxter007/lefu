@@ -32,7 +32,7 @@ struct GuideView: View {
                 faqCard("听不见歌了？", "说明系统输出被切到了 BlackHole 本体（虚拟黑洞，无声）或别的设备。到系统设置（或音频 MIDI 设置）把输出切回「乐府 采诗通道」，乐府的放音路由状态会实时恢复绿灯。")
                 faqCard("歌词是空的？", "歌词按 自家缓存 → 汽水本地缓存 → LRCLIB → 网易云 顺序抓取。纯器乐或小众歌可能全网没有；联网抓到过的歌会存进缓存，之后离线也有。")
                 faqCard("需要装什么软件？", "什么都不用。MP3 编码器（LAME）已内置在 App 里，歌词零依赖，BlackHole 会引导你安装。")
-                faqCard("汽水没开播会怎样？", "开着挂机监听它就一直待命；没开播时采诗页显示「府中清静」。挂机监听关着的话，点开始采诗才会录。")
+                faqCard("汽水没开播会怎样？", "开着挂机监听它就一直待命；没开播时菜单栏面板显示「府中清静」。挂机监听关着的话，点开始采诗才会录。")
                 faqCard("成品在哪？", "默认在 ~/Music/乐府，按日期分文件夹，MP3 已内嵌封面和标签，同目录附 .lrc 歌词。可在设置页改输出位置。")
                 sectionTitle("快捷操作")
                 shortcutsCard
@@ -334,7 +334,7 @@ struct GuideView: View {
                     .foregroundColor(th.accent)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("菜单栏控制台").font(.system(size: 12, weight: .semibold)).foregroundColor(th.text)
-                    Text("关窗后乐府常驻菜单栏：看状态、收卷裁曲、开挂机监听都在那点").font(.system(size: 10)).foregroundColor(th.text3)
+                    Text("关窗后乐府常驻菜单栏：看状态、收卷、开挂机监听都在那点").font(.system(size: 10)).foregroundColor(th.text3)
                 }
                 Spacer()
             }
@@ -346,17 +346,6 @@ struct GuideView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("下一阕").font(.system(size: 12, weight: .semibold)).foregroundColor(th.text)
                     Text("采诗中手动打点：当前歌从这句开始算作下一首").font(.system(size: 10)).foregroundColor(th.text3)
-                }
-                Spacer()
-            }
-            Divider().overlay(th.border)
-            HStack(spacing: 10) {
-                Image(systemName: "scissors")
-                    .font(.system(size: 14))
-                    .foregroundColor(th.accent)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("裁曲页").font(.system(size: 12, weight: .semibold)).foregroundColor(th.text)
-                    Text("散落的长录音也能裁：拖入 WAV + 同名 .jsonl 时间轴，按歌精确切").font(.system(size: 10)).foregroundColor(th.text3)
                 }
                 Spacer()
             }
