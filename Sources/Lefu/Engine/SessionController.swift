@@ -315,6 +315,8 @@ final class SessionController: ObservableObject {
         cutTasks = []
         elapsed = 0
         coverAccent = nil
+        lyrics = LyricsDocument(lines: [])
+        lyricIndex = -1
 
         // 无声自动停：阈值 60 秒（歌间串场/掌声/电台 DJ 静音都不会误触发；真停播由挂机监听的停播判定负责）
         capture.silenceLimit = settings.silenceAutoStop ? 60.0 : .infinity
@@ -447,21 +449,21 @@ final class SessionController: ObservableObject {
         pendingRowIDs.append(rowID)
         songStartElapsed = elapsed
 
-        // 歌词预取
-        if !settings.offlineMode {
-            let dur = info.duration
-            let cacheDir = settings.resolvedOutputDir.appendingPathComponent(".lyrics")
-            Task {
-                if let doc = await LyricsFetcher.fetchDocument(title: info.title, artist: info.artist, duration: dur, offline: false, fallback: settings.lyricFallback, cacheDir: cacheDir) {
-                    await MainActor.run {
-                        self.lyrics = doc
-                        self.lyricIndex = -1
-                    }
-                }
+        // 歌词预取：始终走同一条路。fetchDocument 先读汽水本地 KRC（零联网、可逐字），
+        // 再退回本地缓存 / 在线源——离线用户也能拿到本地 KRC 逐字时间轴。
+        // 抓到就设置、抓不到就清空，绝不让上一首的歌词残留。
+        let dur = info.duration
+        let cacheDir = settings.resolvedOutputDir.appendingPathComponent(".lyrics")
+        let offline = settings.offlineMode
+        let fallback = settings.lyricFallback
+        Task {
+            let doc = await LyricsFetcher.fetchDocument(title: info.title, artist: info.artist,
+                                                         duration: dur, offline: offline,
+                                                         fallback: fallback, cacheDir: cacheDir)
+            await MainActor.run {
+                self.lyrics = doc ?? LyricsDocument(lines: [])
+                self.lyricIndex = -1
             }
-        } else {
-            lyrics = LyricsDocument(lines: [])
-            lyricIndex = -1
         }
     }
 
@@ -649,7 +651,7 @@ final class SessionController: ObservableObject {
                                                                 title: task.entry.title, artist: task.entry.artist,
                                                                 status: .captured))
                             // 封卷仪式：每首成品落盘即发通知 + 一次轻触感（仅成功统计这一处，避免重复）
-                            Notifier.songCaptured(title: task.entry.title, artist: task.entry.artist)
+                            Notifier.songCaptured(title: task.entry.title, artist: task.entry.artist, cover: task.entry.cover)
                             Notifier.tap()
                         case .skipped:
                             self.doneStats.skippedCount += 1
@@ -727,6 +729,8 @@ final class SessionController: ObservableObject {
         currentTrack = nil
         artworkImage = nil
         coverAccent = nil
+        lyrics = LyricsDocument(lines: [])
+        lyricIndex = -1
         // 清空封面签名/钥匙，避免下一场首曲与上一场尾曲字节相同时跳过重建封面
         lastArtworkSignature = nil
         accentKey = nil
@@ -774,6 +778,11 @@ final class SessionController: ObservableObject {
     // MARK: 府库扫描（今日成果 + 最近成品，供待机页右栏）
     func refreshLibrary() {
         let dir = settings.resolvedOutputDir
+        // 上一次的封面按 id 存档：本次重建时直接继承，刷新瞬间封面墙不再集体变白
+        var previousCovers: [URL: NSImage] = [:]
+        for item in library.all {
+            if let cover = item.cover { previousCovers[item.id] = cover }
+        }
         DispatchQueue.global().async { [weak self] in
             let fm = FileManager.default
             let audioExt: Set<String> = ["mp3", "m4a", "wav", "flac", "aac"]
@@ -800,6 +809,10 @@ final class SessionController: ObservableObject {
                 }
             }
             scan(dir, depth: 1)
+            // 继承已提取过的封面（id 不变即沿用），避免每次刷新清空封面墙
+            for i in items.indices {
+                if let cover = previousCovers[items[i].id] { items[i].cover = cover }
+            }
             items.sort { $0.date > $1.date }
             let cal = Calendar.current
             let todayItems = items.filter { cal.isDateInToday($0.date) }
@@ -814,24 +827,34 @@ final class SessionController: ObservableObject {
             let box = self
             Task { @MainActor in
                 guard let s = box else { return }
+                // 先一次性落地扫描结果（items 已继承旧封面），封面墙不会闪白
                 s.library = stats
-                // 封面异步回填：全量扫描，只读 ID3 头不碰音频数据；单次后台遍历
-                DispatchQueue.global().async {
-                    for (idx, item) in stats.all.enumerated() {
-                        guard item.id.pathExtension.lowercased() == "mp3" else { continue }
-                        guard let img = CoverExtractor.extract(from: item.id) else { continue }
-                        Task { @MainActor in
-                            var rec = s.library
-                            guard idx < rec.all.count,
-                                  rec.all[idx].id == item.id else { return }
-                            rec.all[idx].cover = img
-                            if idx < rec.recent.count, rec.recent[idx].id == item.id {
-                                rec.recent[idx].cover = img
-                            }
-                            s.library = rec
+                // 只给仍缺封面的 mp3 读 ID3 头（不碰音频数据），在后台线程提取后攒成一批。
+                // 旧实现每命中一首就从主线程整体拷贝 s.library 再赋值（O(N²)）且先清空封面；
+                // 这里提取期间让出主线程，最终只做一次批量合并赋值。
+                let pending = stats.all.filter { $0.cover == nil && $0.id.pathExtension.lowercased() == "mp3" }
+                guard !pending.isEmpty else { return }
+                let covers: [URL: NSImage] = await withCheckedContinuation { (cont: CheckedContinuation<[URL: NSImage], Never>) in
+                    DispatchQueue.global(qos: .utility).async {
+                        var found: [URL: NSImage] = [:]
+                        for item in pending {
+                            if let img = CoverExtractor.extract(from: item.id) { found[item.id] = img }
                         }
+                        cont.resume(returning: found)
                     }
                 }
+                guard !covers.isEmpty else { return }
+                var rec = s.library
+                var recentIdx: [URL: Int] = [:]
+                for (i, it) in rec.recent.enumerated() { recentIdx[it.id] = i }
+                var changed = false
+                for i in rec.all.indices where rec.all[i].cover == nil {
+                    guard let img = covers[rec.all[i].id] else { continue }
+                    rec.all[i].cover = img
+                    if let ri = recentIdx[rec.all[i].id] { rec.recent[ri].cover = img }
+                    changed = true
+                }
+                if changed { s.library = rec }
             }
         }
     }
