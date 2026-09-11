@@ -39,13 +39,26 @@ struct SettingsView: View {
                         .padding(.horizontal, 14)
                         .padding(.top, 10)
                         .padding(.bottom, 2)
-                    ForEach(SourceRegistry.shared.allProfiles) { p in
-                        row(p.displayName, icon: p.symbolName) {
-                            Toggle("", isOn: sourceBinding(p))
-                                .toggleStyle(.switch)
-                                .labelsHidden()
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 6)],
+                              alignment: .leading, spacing: 6) {
+                        ForEach(SourceRegistry.shared.allProfiles) { p in
+                            Toggle(isOn: sourceBinding(p)) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: p.symbolName)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(th.text2)
+                                        .frame(width: 16)
+                                    Text(p.displayName)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(th.text)
+                                }
+                            }
+                            .toggleStyle(.checkbox)
                         }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 4)
+                    .padding(.bottom, 10)
                     if settings.enabledSourceIDs.isEmpty {
                         Text("未选择任何音源：不会录制任何内容")
                             .font(.system(size: 11))
