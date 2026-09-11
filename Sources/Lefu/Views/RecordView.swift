@@ -1,4 +1,5 @@
 import SwiftUI
+import LefuCore
 
 // MARK: - 采诗 · 录制台（五态：待机/采录中/收卷裁曲中/本次完成 + 环境引导）
 struct RecordView: View {
@@ -425,22 +426,21 @@ struct RecordView: View {
                     .lineLimit(1)
                     .foregroundColor(th.text2.opacity(subText.isEmpty ? 0 : 1))
                     .frame(height: 20, alignment: .leading)
-                // 歌词双行（占位固定）
-                let line1: String? = session.lyricIndex >= 0 && session.lyricIndex < session.lyricLines.count
-                    ? session.lyricLines[session.lyricIndex].1 : nil
-                let line2: String? = session.lyricIndex >= 0 && session.lyricIndex + 1 < session.lyricLines.count
-                    ? session.lyricLines[session.lyricIndex + 1].1 : nil
-                Text(line1 ?? " ")
+                // 歌词双行（占位固定；整行滚动 + KRC 可选逐字高亮）
+                let idx = session.lyricIndex
+                let cur = session.lyrics.lines[safe: idx]
+                let next = session.lyrics.lines[safe: idx + 1]
+                lyricCurrentText(cur, nextStart: next?.start)
                     .font(.system(size: 15, weight: .medium))
                     .lineLimit(1)
-                    .foregroundColor(line1 == nil ? .clear : th.text)
                     .frame(height: 22, alignment: .leading)
-                Text(line2 ?? " ")
+                Text(next?.text ?? " ")
                     .font(.lefu(.callout))
                     .lineLimit(1)
-                    .foregroundColor(line2 == nil ? .clear : th.text2)
+                    .foregroundColor(next == nil ? .clear : th.text2)
                     .frame(height: 19, alignment: .leading)
             }
+            .animation(.easeInOut(duration: 0.3), value: session.lyricIndex)
             Spacer(minLength: 0)
         }
     }
@@ -448,6 +448,30 @@ struct RecordView: View {
     private var subText: String {
         guard let t = session.currentTrack else { return "" }
         return t.artist + (t.album.isEmpty ? "" : " · " + t.album)
+    }
+
+    // MARK: 歌词当前行（KRC 逐字：已唱亮、当前词强调、未唱暗；否则整行亮）
+    private func lyricCurrentText(_ line: LyricLine?, nextStart: Double?) -> Text {
+        guard let line else { return Text(" ").foregroundColor(.clear) }
+        // 只在播放位置落在本行区间内才逐字；否则整行亮（防止行与时间基短暂错位）
+        let inLine = songPos >= line.start && (nextStart.map { songPos < $0 } ?? true)
+        guard !line.words.isEmpty, inLine else {
+            return Text(line.text).foregroundColor(th.text)
+        }
+        var attr = AttributedString()
+        for w in line.words {
+            var part = AttributedString(w.text)
+            part.foregroundColor = wordColor(w)
+            attr += part
+        }
+        return Text(attr)
+    }
+
+    /// 逐字着色：已唱完亮、正在唱用强调色、未唱暗
+    private func wordColor(_ w: LyricWord) -> Color {
+        if songPos >= w.start + w.duration { return th.text }
+        if songPos >= w.start { return th.accent }
+        return th.text2.opacity(0.55)
     }
 
     private var artColor: Color {
@@ -1069,5 +1093,12 @@ struct PillStyle: ButtonStyle {
             .shadow(color: kind == .normal ? .clear : theme.shadow, radius: 8, y: 3)
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
+// MARK: - 安全下标（越界返回 nil：lyricIndex 可能是 -1，next 可能越界）
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

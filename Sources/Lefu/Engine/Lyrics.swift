@@ -1,4 +1,5 @@
 import Foundation
+import LefuCore
 
 // MARK: - 歌词抓取：自家缓存 → LRCLIB → 网易云
 enum LyricsFetcher {
@@ -24,6 +25,18 @@ enum LyricsFetcher {
             return lrc
         }
         return nil
+    }
+
+    /// 结构化歌词入口：汽水本地原始 KRC（可逐字）优先，否则退回 fetchLRC 的整行 LRC
+    static func fetchDocument(title: String, artist: String, duration: Double,
+                              offline: Bool, fallback: Bool, cacheDir: URL?) async -> LyricsDocument? {
+        if let krc = SodaLyrics.localKRC(title: title, artist: artist), !krc.isEmpty {
+            let doc = LyricsDocument.parseKRC(krc)
+            if !doc.lines.isEmpty { return doc }
+        }
+        guard let lrc = await fetchLRC(title: title, artist: artist, duration: duration,
+                                       offline: offline, fallback: fallback, cacheDir: cacheDir) else { return nil }
+        return LyricsDocument.parseLRC(lrc)
     }
 
     // MARK: 自建歌词缓存库（~/Music/乐府/.lyrics/）

@@ -14,6 +14,7 @@ enum SodaLyrics {
     struct Entry {
         var krcLrc = ""
         var lineLrc = ""
+        var rawKRC = ""   // 原始 KRC 正文（含 <offset,dur,0> 逐字标签），供结构化解析
     }
 
     // 扫描结果内存缓存（db 是追加日志，按文件大小判断是否需要重扫）
@@ -47,6 +48,20 @@ enum SodaLyrics {
         return nil
     }
 
+    /// 汽水本地原始 KRC 文本（逐字高亮用）；与 localLyrics 同一精确索引，不输出宽索引兜底
+    static func localKRC(title: String, artist: String) -> String? {
+        guard !title.isEmpty, let data = try? Data(contentsOf: dbURL) else { return nil }
+        let bytes = [UInt8](data)
+        let index = scanIndex(bytes: bytes, size: data.count)
+        let artistB = Array(artist.utf8)
+        for tid in titleCandidates(bytes, title: title) {
+            if let entry = index[tid], entry.rawKRC.count > 30, artistOK(bytes, tid: tid, artistB: artistB) {
+                return entry.rawKRC
+            }
+        }
+        return nil
+    }
+
     // MARK: 精确索引：记录特征 = 歌词字符串 + \xc2(false) + \xa3krck + ... + \xb3<track_id>
     private static func scanIndex(bytes: [UInt8], size: Int) -> [String: Entry] {
         if let c = cache, c.size == size { return c.index }
@@ -60,10 +75,12 @@ enum SodaLyrics {
             let after = Array(bytes[mEnd..<min(mEnd + 250, bytes.count)])
             guard let tid = firstTrackID(after) else { continue }
             var e = out[tid] ?? Entry()
+            let rawText = String(decoding: raw, as: UTF8.self)
             let krc = krcToLrc(raw)
             let line = plainLrc(raw)
             if krc.count > e.krcLrc.count { e.krcLrc = krc }
             if line.count > e.lineLrc.count { e.lineLrc = line }
+            if rawText.count > e.rawKRC.count { e.rawKRC = rawText }
             out[tid] = e
         }
         cache = (size, out)

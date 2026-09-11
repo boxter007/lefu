@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import AppKit
 import SwiftUI
+import LefuCore
 
 // MARK: - 采诗页五个中间态
 enum RecState: Equatable {
@@ -102,7 +103,7 @@ final class SessionController: ObservableObject {
     @Published var doneStats = DoneStats()
     @Published var elapsed: Double = 0
     @Published var toast: String?
-    @Published var lyricLines: [(Double, String)] = []
+    @Published var lyrics = LyricsDocument(lines: [])
     @Published var lyricIndex: Int = -1
     @Published var reworkFileURL: URL?
     @Published var artworkImage: NSImage?
@@ -359,9 +360,10 @@ final class SessionController: ObservableObject {
                 box.elapsed += 1
                 // 歌词行推进（按本歌在会话内的起始秒推算）
                 if let t = box.currentTrack, box.elapsed > 0 {
-                    let offset = box.elapsed - box.songStartElapsed
-                    if offset >= 0, !box.lyricLines.isEmpty {
-                        box.lyricIndex = LRCParser.currentLine(box.lyricLines, at: offset)
+                    // 与 RecordView.songPos 同一时间基准（含确认前已播的头），否则逐字高亮会比行早跳 ~songLeadSeconds
+                    let offset = box.elapsed - box.songStartElapsed + box.songLeadSeconds
+                    if offset >= 0, !box.lyrics.lines.isEmpty {
+                        box.lyricIndex = box.lyrics.currentLineIndex(at: offset)
                     }
                 }
             }
@@ -440,15 +442,15 @@ final class SessionController: ObservableObject {
             let dur = info.duration
             let cacheDir = settings.resolvedOutputDir.appendingPathComponent(".lyrics")
             Task {
-                if let lrc = await LyricsFetcher.fetchLRC(title: info.title, artist: info.artist, duration: dur, offline: false, fallback: settings.lyricFallback, cacheDir: cacheDir) {
+                if let doc = await LyricsFetcher.fetchDocument(title: info.title, artist: info.artist, duration: dur, offline: false, fallback: settings.lyricFallback, cacheDir: cacheDir) {
                     await MainActor.run {
-                        self.lyricLines = LRCParser.parse(lrc)
+                        self.lyrics = doc
                         self.lyricIndex = -1
                     }
                 }
             }
         } else {
-            lyricLines = []
+            lyrics = LyricsDocument(lines: [])
             lyricIndex = -1
         }
     }
