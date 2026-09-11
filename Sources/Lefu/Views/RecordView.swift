@@ -117,8 +117,7 @@ struct RecordView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 13)
             .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(th.panel))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(th.border, lineWidth: 0.5))
+            .lefuCard(th, radius: 12)
 
             // 最近成品（限 6 条）
             VStack(alignment: .leading, spacing: 0) {
@@ -127,16 +126,14 @@ struct RecordView: View {
                     .foregroundColor(th.text)
                     .padding(.bottom, 8)
                 if session.library.recent.isEmpty {
-                    VStack(spacing: 5) {
+                    VStack(spacing: 6) {
                         Image(systemName: "music.note.house")
                             .font(.system(size: 18))
                             .foregroundColor(th.text2)
-                        Text("府库还空着")
+                        Text("还没有采到歌，点中央开始")
                             .font(.system(size: 11))
                             .foregroundColor(th.text2)
-                        Text("采一场，成品会落在这里")
-                            .font(.system(size: 10))
-                            .foregroundColor(th.text2.opacity(0.85))
+                            .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 22)
@@ -187,8 +184,7 @@ struct RecordView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(th.panel.opacity(0.7)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(th.border, lineWidth: 0.5))
+            .lefuCard(th, radius: 12)
 
             // 挂机监听快捷卡
             HStack(spacing: 8) {
@@ -214,8 +210,7 @@ struct RecordView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(th.panel))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(th.border, lineWidth: 0.5))
+            .lefuCard(th, radius: 12)
         }
     }
 
@@ -310,8 +305,7 @@ struct RecordView: View {
             }
             .padding(18)
             .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(th.panel.opacity(0.75)))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(th.border, lineWidth: 0.5))
+            .lefuCard(th, radius: 12)
 
             // ② 会话队列
             VStack(alignment: .leading, spacing: 8) {
@@ -325,11 +319,16 @@ struct RecordView: View {
                         .foregroundColor(th.text2)
                 }
                 if session.trackRows.isEmpty {
-                    Text("切到一首歌，这里就会开始记录")
-                        .font(.system(size: 12))
-                        .foregroundColor(th.text2)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
+                    VStack(spacing: 6) {
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 18))
+                            .foregroundColor(th.text2)
+                        Text("切到一首歌，这里就会开始记录")
+                            .font(.system(size: 12))
+                            .foregroundColor(th.text2)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -368,8 +367,7 @@ struct RecordView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(th.panel.opacity(0.55)))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(th.border, lineWidth: 0.5))
+            .lefuCard(th, radius: 12)
 
             // ③ 操作栏：紧贴队列，主操作居中（裁曲已实时进行，收卷=停录+尾首入流水线）
             HStack(spacing: 12) {

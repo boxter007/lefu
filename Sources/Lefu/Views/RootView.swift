@@ -41,7 +41,7 @@ struct RootView: View {
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(th.text)
                 Rectangle()
-                    .fill(th.border2)
+                    .fill(th.border)
                     .frame(width: 1, height: 14)
                 Text(page.rawValue)
                     .font(.lefu(.headline))
