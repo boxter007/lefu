@@ -684,28 +684,36 @@ struct RecordView: View {
             // 中央：裁曲进度环
             VStack(spacing: 12) {
                 ZStack {
-                    Circle()
-                        .stroke(th.border, lineWidth: 7)
-                    Circle()
-                        .trim(from: 0, to: max(0.02, fraction))
-                        .stroke(
-                            AngularGradient(colors: [th.accent.opacity(0.55), th.accent, th.live],
-                                            center: .center,
-                                            startAngle: .degrees(-90), endAngle: .degrees(270)),
-                            style: StrokeStyle(lineWidth: 7, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-                        .animation(.spring(response: 0.6, dampingFraction: 0.85), value: fraction)
-                    VStack(spacing: 1) {
-                        Text("\(processed)")
-                            .font(.system(size: 34, weight: .semibold, design: .rounded).monospacedDigit())
-                            .foregroundColor(th.text)
-                        Text(total > 0 ? "共 \(total) 阕" : "准备中")
-                            .font(.system(size: 11))
-                            .foregroundColor(th.text2)
+                    // 封卷仪式：CA 层光环 + 外圈呼吸（沿用待机页「开始采诗」的同一套组件）
+                    PulseHalo(color: th.accent)
+                        .frame(width: 184, height: 184)
+                    PulseRing(color: th.accent.opacity(0.35))
+                        .frame(width: 144, height: 144)
+                    ZStack {
+                        Circle()
+                            .stroke(th.border, lineWidth: 7)
+                        Circle()
+                            .trim(from: 0, to: max(0.02, fraction))
+                            .stroke(
+                                AngularGradient(colors: [th.accent.opacity(0.55), th.accent, th.live],
+                                                center: .center,
+                                                startAngle: .degrees(-90), endAngle: .degrees(270)),
+                                style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                            )
+                            .rotationEffect(.degrees(-90))
+                            .animation(.spring(response: 0.6, dampingFraction: 0.85), value: fraction)
+                        VStack(spacing: 1) {
+                            Text("\(processed)")
+                                .font(.system(size: 34, weight: .semibold, design: .rounded).monospacedDigit())
+                                .foregroundColor(th.text)
+                            Text(total > 0 ? "共 \(total) 阕" : "准备中")
+                                .font(.system(size: 11))
+                                .foregroundColor(th.text2)
+                        }
                     }
+                    .frame(width: 128, height: 128)
                 }
-                .frame(width: 128, height: 128)
+                .frame(width: 184, height: 184)
 
                 if let a = active {
                     VStack(spacing: 9) {
@@ -839,14 +847,24 @@ struct RecordView: View {
     }
 
     // MARK: 本次完成
+    /// 完成徽章主色：有成品用成功色，空手用跳过色（与徽章填充一致）
+    private var doneAccent: Color { session.doneStats.count == 0 ? th.skip : th.ok }
+
     private var doneView: some View {
         VStack(spacing: 0) {
             Spacer()
             ZStack {
-                Circle().fill(session.doneStats.count == 0 ? th.skip : th.ok).frame(width: 64, height: 64)
-                Image(systemName: session.doneStats.count == 0 ? "tray" : "checkmark")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(.white)
+                // 封卷仪式：完成徽章同样走 CA 层呼吸，与收卷进度环同一套组件
+                PulseHalo(color: doneAccent)
+                    .frame(width: 96, height: 96)
+                PulseRing(color: doneAccent.opacity(0.35))
+                    .frame(width: 76, height: 76)
+                ZStack {
+                    Circle().fill(doneAccent).frame(width: 64, height: 64)
+                    Image(systemName: session.doneStats.count == 0 ? "tray" : "checkmark")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(.white)
+                }
             }
             Text(session.doneStats.count == 0 ? "没有采到成品" : "本次完成")
                 .font(.lefu(.title2))

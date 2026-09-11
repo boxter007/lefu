@@ -178,6 +178,7 @@ final class SessionController: ObservableObject {
             .store(in: &subscribers)
         refreshLibrary()
         startRouteWatcher()
+        Notifier.requestAuthorization()
     }
 
     // MARK: 采诗通道状态实时监测
@@ -624,6 +625,9 @@ final class SessionController: ObservableObject {
                             self.doneStats.rows.append(TrackRow(id: 1000 + self.doneStats.rows.count,
                                                                 title: task.entry.title, artist: task.entry.artist,
                                                                 status: .captured))
+                            // 封卷仪式：每首成品落盘即发通知 + 一次轻触感（仅成功统计这一处，避免重复）
+                            Notifier.songCaptured(title: task.entry.title, artist: task.entry.artist)
+                            Notifier.tap()
                         case .skipped:
                             self.doneStats.skippedCount += 1
                         case .failed:
