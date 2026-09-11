@@ -3,6 +3,24 @@
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)；条目组织参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 构建号由打包脚本自动递增（见 [`VERSION`](VERSION) 与 [`scripts/build_app.sh`](scripts/build_app.sh)），应用内「设置 → 引擎（高级）→ 版本」可查看当前安装的版本。
 
+## [未发布] — 计划 v1.0.2
+
+底层加固：安装链路补上完整性校验、日志加上容量上限、签名去掉废弃用法并纳入校验。不涉及界面与录制逻辑。
+
+### 安全
+
+- **安装包双重校验**（[#9](https://github.com/boxter007/lefu/issues/9)）：`BlackHoleInstaller` 下载官方 pkg 后，先比对字节级 SHA256，再经 `pkgutil --check-signature` 核验「Developer ID Installer: Existential Audio Inc. (Q5C99V536K)」签名链且已被 Apple 公证；任一不过即中止，不再进入提权安装。此前只有「响应码 200 + 大小 > 100KB」两道形同虚设的门
+
+### 修复
+
+- **诊断日志无上限**（[#10](https://github.com/boxter007/lefu/issues/10)）：单文件超过 2MB 即归档为 `lefu-diag.log.1`（覆盖式，不堆叠）。挂机常驻不再会一路写大；顺带把每次调用新建的 `DateFormatter` 提为静态复用
+- **签名流程规范化**（[#11](https://github.com/boxter007/lefu/issues/11)）：去掉已废弃的 `codesign --deep`，改为显式签 `Contents/Frameworks` 内的 dylib 再签主 bundle；签名失败不再被 `|| true` 静默吞掉，`codesign --verify --strict` 不过就中止打包
+  - 注：`--options runtime`（hardened runtime）**本版刻意不加**——实测 ad-hoc 签名无 Team ID 时启用它会触发 library validation，拒绝 `dlopen` 内置 libmp3lame，导致 MP3 编码静默回落 M4A。须随 [#2](https://github.com/boxter007/lefu/issues/2) 的真实证书一起启用
+
+### 构建
+
+- **仓库卫生**（[#12](https://github.com/boxter007/lefu/issues/12)）：`design/` 下 6 个图标生成的临时中间产物（约 4MB）移出版本控制并加 `.gitignore` 规则
+
 ## [1.0.1] — 2026-09-11
 
 这一版主要治「长时间挂机录制越跑越卡」的性能病，另修列表定位与波形渲染两处回归，并补上版本号体系。

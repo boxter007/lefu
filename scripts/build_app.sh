@@ -100,8 +100,29 @@ cat > "$APP/Contents/Info.plist" << PLIST
 </plist>
 PLIST
 
-echo "== 3. ad-hoc 签名 =="
-codesign --force --deep -s - "$APP" 2>/dev/null || true
+echo "== 3. 签名（显式签嵌套代码，不用已废弃的 --deep）=="
+# --deep 已被 Apple 标记为不应使用：它把签名选项不加区分地套到嵌套代码上。
+# 正确做法是先签 Frameworks 里的 dylib，再签主 bundle。
+#
+# 这里刻意不加 --options runtime（hardened runtime）：
+#   实测 ad-hoc 签名没有 Team ID，一旦启用 hardened runtime，library validation 会拒绝
+#   dlopen 内置的 libmp3lame.0.dylib，报 "mapping process and mapped file ... have
+#   different Team IDs"，MP3 编码会静默失效（回落 M4A）。
+#   等 issue #2 接入真实 Developer ID 证书后，再连同 --options runtime 一起打开并公证。
+FW="$APP/Contents/Frameworks"
+for lib in "$FW"/*.dylib; do
+  [ -e "$lib" ] || continue
+  codesign --force -s - "$lib" 2>/dev/null || echo "   警告：嵌套库签名失败 $(basename "$lib")"
+done
+codesign --force -s - "$APP"
+
+# 签名必须校验通过，否则产物在别人机器上会被 Gatekeeper 拦下
+if codesign --verify --strict "$APP" 2>/dev/null; then
+  echo "   签名校验通过"
+else
+  echo "   错误：签名校验未通过，中止打包" >&2
+  exit 1
+fi
 
 echo "版本 → ${MARKETING} (build ${BUILD_NO})"
 echo "完成 → $APP"

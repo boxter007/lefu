@@ -6,3 +6,5 @@ DerivedData/
 .swiftpm/
 engine/**/__pycache__/
 .workbuddy/
+# 图标生成过程中的临时中间产物
+design/.*.png-*
