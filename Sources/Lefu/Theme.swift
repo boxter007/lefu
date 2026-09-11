@@ -89,7 +89,8 @@ extension LefuTheme {
         border: Color.black.opacity(0.07),
         border2: Color.black.opacity(0.13),
         text: Color.p3(0.13, 0.115, 0.17),
-        text2: Color.p3(0.52, 0.49, 0.57),
+        // text2 压深：氛围背景最坏情况（纯黑封面 + 白遮罩）下辅助文字仍需 >= 3:1
+        text2: Color.p3(0.42, 0.39, 0.47),
         text3: Color.p3(0.70, 0.67, 0.74),
         accent: Color.p3(0.86, 0.28, 0.47),      // P3 玫红
         accentContrast: .white,

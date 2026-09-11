@@ -20,7 +20,11 @@ enum BlurredCover {
 
     static func cached(_ key: String) -> CGImage? {
         lock.lock(); defer { lock.unlock() }
-        return cache[key]
+        guard let hit = cache[key] else { return nil }
+        // 命中时刷新 LRU 新近度（否则退化成 FIFO）
+        order.removeAll { $0 == key }
+        order.append(key)
+        return hit
     }
 
     /// cgImage 为 nil（无封面）时不 blur，直接回主线程交付 nil。
@@ -57,6 +61,8 @@ final class AmbientView: NSView {
     private var scrimIsDark = true
     /// 当前已请求的封面 key（陈旧守卫用）
     var lastKey = ""
+    /// 当前已应用的封面对象：同一 key 上封面晚到时也要触发一次
+    var lastImage: NSImage?
     /// 是否已成功渲染过一帧：首帧不淡入，之后切歌 0.6s 交叉淡入
     var hasRendered = false
 
@@ -87,11 +93,12 @@ final class AmbientView: NSView {
     /// 数值按最坏情况（纯白/纯黑封面）保正文 >= 4.5:1、辅助 >= 3:1，详见报告。
     private func applyScrimColors(isDark: Bool) {
         if isDark {
-            scrim.colors = [NSColor.black.withAlphaComponent(0.70).cgColor,
+            scrim.colors = [NSColor.black.withAlphaComponent(0.72).cgColor,
                             NSColor.black.withAlphaComponent(0.88).cgColor]
         } else {
-            scrim.colors = [NSColor.white.withAlphaComponent(0.60).cgColor,
-                            NSColor.white.withAlphaComponent(0.82).cgColor]
+            // 浅色主题正文/辅助都是深色字，遮罩要更实；数值见 task-3-report 对比度表
+            scrim.colors = [NSColor.white.withAlphaComponent(0.80).cgColor,
+                            NSColor.white.withAlphaComponent(0.92).cgColor]
         }
     }
 
@@ -135,9 +142,13 @@ struct AmbientBackground: NSViewRepresentable {
         // 主题可能变化，遮罩同步（不触发 blur）
         v.setScrim(isDark: isDark)
 
-        // 只在 key 变化时入队，避免每次 SwiftUI 重算都重新模糊
-        guard v.lastKey != key else { return }
+        // key 或封面对象变化才入队，避免每次 SwiftUI 重算都重新模糊；
+        // 封面可能在同 key 上晚到（元信息纠正），只比对 key 会把这次更新吞掉。
+        let keyChanged = v.lastKey != key
+        let imageChanged = v.lastImage !== image
+        guard keyChanged || imageChanged else { return }
         v.lastKey = key
+        v.lastImage = image
 
         guard !key.isEmpty, image != nil else {
             // 无曲目 / 无封面：淡出到纯色底（th.bg）

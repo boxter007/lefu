@@ -56,7 +56,7 @@ struct RecordView: View {
                 .foregroundColor(th.text)
             Text("监听汽水正在播放的内容，边听边录，已有的歌自动跳过")
                 .font(.lefu(.callout))
-                .foregroundColor(th.text3)
+                .foregroundColor(th.text2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 400)
 
@@ -438,7 +438,7 @@ struct RecordView: View {
                 Text(line2 ?? " ")
                     .font(.lefu(.callout))
                     .lineLimit(1)
-                    .foregroundColor(line2 == nil ? .clear : th.text3)
+                    .foregroundColor(line2 == nil ? .clear : th.text2)
                     .frame(height: 19, alignment: .leading)
             }
             Spacer(minLength: 0)
@@ -678,7 +678,7 @@ struct RecordView: View {
                             .foregroundColor(th.text)
                         Text(total > 0 ? "共 \(total) 阕" : "准备中")
                             .font(.system(size: 11))
-                            .foregroundColor(th.text3)
+                            .foregroundColor(th.text2)
                     }
                 }
                 .frame(width: 128, height: 128)
@@ -729,7 +729,7 @@ struct RecordView: View {
 
             Text("裁曲在后台进行，完成后自动入库 · 可先去忙别的")
                 .font(.system(size: 10))
-                .foregroundColor(th.text3)
+                .foregroundColor(th.text2)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
         }
@@ -773,7 +773,7 @@ struct RecordView: View {
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 12)).foregroundColor(failColor)
         case .queue:
-            Image(systemName: "circle.dashed").font(.system(size: 12)).foregroundColor(th.text3)
+            Image(systemName: "circle.dashed").font(.system(size: 12)).foregroundColor(th.text2)
         default:
             ProgressView().controlSize(.mini)
         }
@@ -791,7 +791,7 @@ struct RecordView: View {
                 .frame(width: 5, height: 5)
             Text(name)
                 .font(.system(size: 11))
-                .foregroundColor(state == 0 ? th.text3 : (state == 1 ? th.accent : th.ok))
+                .foregroundColor(state == 0 ? th.text2 : (state == 1 ? th.accent : th.ok))
         }
     }
 
@@ -809,7 +809,7 @@ struct RecordView: View {
         case .done: return th.ok
         case .failed: return failColor
         case .skipped: return th.skip
-        case .queue: return th.text3
+        case .queue: return th.text2
         default: return th.accent
         }
     }
