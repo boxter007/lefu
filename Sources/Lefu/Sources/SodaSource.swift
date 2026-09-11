@@ -14,4 +14,7 @@ final class SodaSource: MusicSource {
         control: .nowPlayingCLI,
         lyricsBackendIDs: ["soda.local"],
         enabledByDefault: true)
+
+    /// 汽水本地歌词：entries.db 的 KRC/LRC（零联网）
+    static let lyricsBackends: [LyricsBackend] = [SodaLocalLyricsBackend()]
 }

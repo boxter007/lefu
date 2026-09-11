@@ -1,25 +1,22 @@
 import Foundation
 import LefuCore
 
-// MARK: - 歌词抓取：自家缓存 → LRCLIB → 网易云
+// MARK: - 歌词抓取：本地后端 → 自家缓存 → LRCLIB → 网易云
 enum LyricsFetcher {
     struct Line { let time: Double; let text: String }
 
-    /// 顺序：自家缓存 → 汽水本地缓存（零联网）→ LRCLIB → 网易云；抓到即回写缓存
+    /// 顺序：自家缓存 → LRCLIB → 网易云；抓到即回写缓存。
+    /// 本地歌词（汽水 KRC/LRC）不再写死在这里，由调用方经 localBackends 注入。
     static func fetchLRC(title: String, artist: String, duration: Double, offline: Bool, fallback: Bool, cacheDir: URL? = nil) async -> String? {
         let key = cacheKey(title: title, artist: artist)
         // 1. 自家缓存：离线模式的命脉
         if let dir = cacheDir, let cached = fromCache(dir, key) { return cached }
-        // 2. 汽水本地歌词缓存（entries.db，零联网）
-        if let local = SodaLyrics.localLyrics(title: title, artist: artist), !local.isEmpty {
-            return local
-        }
-        // 3. LRCLIB
+        // 2. LRCLIB
         if !offline, let lrc = await fromLrcLib(title: title, artist: artist, duration: duration) {
             saveToCache(lrc, dir: cacheDir, key: key)
             return lrc
         }
-        // 4. 网易云兜底
+        // 3. 网易云兜底
         if fallback && !offline, let lrc = await fromNetease(title: title, artist: artist) {
             saveToCache(lrc, dir: cacheDir, key: key)
             return lrc
@@ -27,12 +24,16 @@ enum LyricsFetcher {
         return nil
     }
 
-    /// 结构化歌词入口：汽水本地原始 KRC（可逐字）优先，否则退回 fetchLRC 的整行 LRC
+    /// 结构化歌词入口：先遍历本地后端（汽水本地 KRC 可逐字、LRC 次之，零联网），
+    /// 命中即返回；否则退回 fetchLRC 的整行 LRC 链路。
     static func fetchDocument(title: String, artist: String, duration: Double,
-                              offline: Bool, fallback: Bool, cacheDir: URL?) async -> LyricsDocument? {
-        if let krc = SodaLyrics.localKRC(title: title, artist: artist), !krc.isEmpty {
-            let doc = LyricsDocument.parseKRC(krc)
-            if !doc.lines.isEmpty { return doc }
+                              offline: Bool, fallback: Bool, cacheDir: URL?,
+                              localBackends: [LyricsBackend] = []) async -> LyricsDocument? {
+        for backend in localBackends {
+            if let doc = await backend.document(title: title, artist: artist, duration: duration),
+               !doc.lines.isEmpty {
+                return doc
+            }
         }
         guard let lrc = await fetchLRC(title: title, artist: artist, duration: duration,
                                        offline: offline, fallback: fallback, cacheDir: cacheDir) else { return nil }

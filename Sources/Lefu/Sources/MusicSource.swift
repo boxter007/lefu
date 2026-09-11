@@ -2,10 +2,15 @@ import Foundation
 import LefuCore
 
 // MARK: - 音源协议
-// 一个音乐软件 = 一份「音源档案」。本协议只要求档案本身；
-// Task 3 会在协议上追加 lyricsBackends（本地歌词后端）要求。
+// 一个音乐软件 = 一份「音源档案」：档案元数据 + 该音源自带的本地歌词后端。
 protocol MusicSource: AnyObject {
     static var profile: SourceProfile { get }
+    /// 本地歌词后端（零联网）。不实现者默认无本地歌词能力。
+    static var lyricsBackends: [LyricsBackend] { get }
+}
+
+extension MusicSource {
+    static var lyricsBackends: [LyricsBackend] { [] }
 }
 
 // MARK: - 音源登记处
@@ -30,6 +35,11 @@ final class SourceRegistry {
 
     func profile(forID id: String) -> SourceProfile? {
         allProfiles.first { $0.id.raw == id }
+    }
+
+    /// 解析某个音源档案声明的本地歌词后端（按注册类型取；未登记返回空）
+    func backends(for profile: SourceProfile) -> [LyricsBackend] {
+        types.first { $0.profile.id == profile.id }?.lyricsBackends ?? []
     }
 
     /// 门禁：该 App 标识解析出的音源必须在已启用集合内

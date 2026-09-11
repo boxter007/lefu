@@ -450,17 +450,21 @@ final class SessionController: ObservableObject {
         pendingRowIDs.append(rowID)
         songStartElapsed = elapsed
 
-        // 歌词预取：始终走同一条路。fetchDocument 先读汽水本地 KRC（零联网、可逐字），
+        // 歌词预取：始终走同一条路。先按当前音源档案解析出本地歌词后端（如汽水 KRC，零联网、可逐字），
         // 再退回本地缓存 / 在线源——离线用户也能拿到本地 KRC 逐字时间轴。
         // 抓到就设置、抓不到就清空，绝不让上一首的歌词残留。
         let dur = info.duration
         let cacheDir = settings.resolvedOutputDir.appendingPathComponent(".lyrics")
         let offline = settings.offlineMode
         let fallback = settings.lyricFallback
+        // 音源档案 → 本地歌词后端；解析不到音源时为空数组（不影响原有缓存/在线链路）
+        let localBackends = SourceRegistry.shared.profile(forBundle: info.clientBundle)
+            .map { SourceRegistry.shared.backends(for: $0) } ?? []
         Task {
             let doc = await LyricsFetcher.fetchDocument(title: info.title, artist: info.artist,
                                                          duration: dur, offline: offline,
-                                                         fallback: fallback, cacheDir: cacheDir)
+                                                         fallback: fallback, cacheDir: cacheDir,
+                                                         localBackends: localBackends)
             await MainActor.run {
                 self.lyrics = doc ?? LyricsDocument(lines: [])
                 self.lyricIndex = -1
