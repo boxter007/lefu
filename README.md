@@ -99,12 +99,13 @@ macOS 公开接口（`AudioHardwareCreateAggregateDevice`，哪怕带 stacked �
 git clone <本仓库>
 cd lefu
 swift build            # 日常开发
-bash scripts/build_app.sh        # 组装 build/乐府.app（本机架构）
+bash scripts/build_app.sh        # 组装 build/.dist/乐府.app（本机架构）
 UNIVERSAL=1 bash scripts/build_app.sh   # 通用二进制（arm64 + Intel，纯 CLT 即可）
-open build/乐府.app
+bash scripts/install.sh          # 安装到 /Applications 并校验签名
+open build/.dist/乐府.app
 ```
 
-首次启动被 Gatekeeper 拦截（ad-hoc 签名）→ 右键 App → 打开；或 `xattr -cr build/乐府.app`。
+首次启动被 Gatekeeper 拦截（ad-hoc 签名）→ 右键 App → 打开；或 `xattr -cr build/.dist/乐府.app`。
 
 首次使用跟着 App 内「指南」页走：装 BlackHole → 建多输出设备「乐府 通道」（一字不差）→ 状态变绿 → 开始采诗。
 

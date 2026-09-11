@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh — 把 build/乐府.app 安装到 /Applications，并校验签名与版本号
+# install.sh — 把 build/.dist/乐府.app 安装到 /Applications，并校验签名与版本号
 #
 # 为什么单独写这个：
 #   本机的 `rm` 被 WorkBuddy 的安全 shim 接管（/Applications/WorkBuddy.app/.../safe-bin/rm），
@@ -10,7 +10,7 @@
 set -e
 cd "$(dirname "$0")/.."
 APP=/Applications/乐府.app
-SRC=build/乐府.app
+SRC=build/.dist/乐府.app
 
 if [ ! -d "$SRC" ]; then
   echo "找不到 $SRC，请先执行 ./scripts/build_app.sh" >&2

@@ -1,10 +1,17 @@
 #!/bin/bash
 # build_app.sh — 编译乐府并组装成 乐府.app
-# 产物: build/乐府.app (可直接拖进 /Applications)
+# 产物: build/.dist/乐府.app (可直接拖进 /Applications)
+#
+# 为什么放在隐藏目录 build/.dist/ 下：
+#   Spotlight 会索引普通目录里的 .app 包，于是用户在聚焦/访达里搜「乐府」会同时
+#   出现「应用程序里的乐府」和「build 里的乐府」两份。隐藏目录（以点开头）不会被
+#   Spotlight 索引，故构建产物统一放进 build/.dist/。
+#   实测：.metadata_never_index 标记与 com.apple.metadata:kMDItemSupportFileType
+#   xattr 对本机子目录均无效，只有隐藏目录可靠。
 set -e
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
-APP="build/乐府.app"
+APP="build/.dist/乐府.app"
 
 if [ "${UNIVERSAL:-0}" = "1" ]; then
   echo "== 1. swift release 编译（universal：arm64 + x86_64，两次单架构 + lipo 合并）=="
@@ -20,6 +27,9 @@ else
 fi
 
 echo "== 2. 组装 .app 结构 =="
+# 清掉历史遗留的可见产物（旧版本在 build/ 下直接生成，会被 Spotlight 索引成第二份 App）
+/bin/rm -rf "$ROOT/build/乐府.app" "$ROOT/build/Shige.app" 2>/dev/null || true
+
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
 mkdir -p "$APP/Contents/Resources/zh-Hans.lproj" "$APP/Contents/Resources/en.lproj"

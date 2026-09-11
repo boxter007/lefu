@@ -29,8 +29,10 @@ jobs:
 
       - name: Zip app
         run: |
-          cd build
+          cd build/.dist
           ditto -c -k --keepParent 乐府.app "Lefu-${GITHUB_REF_NAME}.zip"
+          # 归档后挪出隐藏目录：action-gh-release 的 glob 默认不匹配点开头的目录
+          mv "Lefu-${GITHUB_REF_NAME}.zip" ..
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

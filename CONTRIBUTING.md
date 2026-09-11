@@ -8,8 +8,9 @@
 git clone git@github.com:boxter007/lefu.git
 cd lefu
 swift build                 # 日常开发
-bash scripts/build_app.sh   # 组装 build/乐府.app（本机架构）
-open build/乐府.app
+bash scripts/build_app.sh   # 组装 build/.dist/乐府.app（本机架构）
+bash scripts/install.sh     # 安装到 /Applications 并校验签名
+open build/.dist/乐府.app
 ```
 
 开发时需要准备：
@@ -19,7 +20,7 @@ open build/乐府.app
 - [BlackHole 2ch](https://existential.audio/blackhole/)（调试内录必需）
 - 音频 MIDI 设置里建好「乐府 通道」多输出设备（名字一字不差，否则 App 认不出来）
 
-首次启动会被 Gatekeeper 拦截（ad-hoc 签名），右键 App 选「打开」即可，或 `xattr -cr build/乐府.app`。
+首次启动会被 Gatekeeper 拦截（ad-hoc 签名），右键 App 选「打开」即可，或 `xattr -cr build/.dist/乐府.app`。
 
 ## 提交改动
 
