@@ -569,7 +569,7 @@ struct RecordView: View {
                 // 切歌打点的歌从 0 播：采录时长 + 确认前已播的头，夹在总时长内
                 Text("\(mmss(songPos)) / \(durText)")
                     .font(.system(size: 11, design: .rounded).monospacedDigit())
-                    .foregroundColor(th.accentText.opacity(0.9))
+                    .foregroundColor(th.accentText)
             }
         case .captured:
             Text(row.sizeBytes > 0 ? "✓ \(mbStr(row.sizeBytes)) · \(mmss(row.seconds))" : "✓ 完成")

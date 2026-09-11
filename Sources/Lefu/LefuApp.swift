@@ -78,10 +78,14 @@ struct LefuApp: App {
             accentText = base.accentText
         }
 
-        // 填充上的前景墨色：强调色偏亮用深墨，偏暗用白。
+        // 填充上的前景墨色：黑墨 / 白墨按与强调色的实际对比度择优（不设固定亮度阈值）。
         let accentContrast: Color
-        if let luminance = accentRGB?.relativeLuminance {
-            accentContrast = luminance > 0.5 ? Color.p3(0.08, 0.07, 0.10) : .white
+        if let accentRGB {
+            let darkInk = RGB(r: 0.08, g: 0.07, b: 0.10)
+            let white = RGB(r: 1, g: 1, b: 1)
+            let darkRatio = AccentDerivation.contrastRatio(accentRGB, darkInk)
+            let whiteRatio = AccentDerivation.contrastRatio(accentRGB, white)
+            accentContrast = darkRatio >= whiteRatio ? Color.p3(0.08, 0.07, 0.10) : .white
         } else {
             accentContrast = isDark ? Color.p3(0.08, 0.07, 0.10) : .white
         }
