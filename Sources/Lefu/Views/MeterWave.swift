@@ -22,10 +22,15 @@ final class MeterWaveView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
+        // 视图坐标系原点固定在左下（与旧版 SwiftUI 的底对齐一致），
+        // 柱子的 y 即「距底部的距离」，向上生长而不是从顶部往下挂。
+        layer?.isGeometryFlipped = false
         for _ in 0..<barCount {
             let g = CAGradientLayer()
-            g.startPoint = CGPoint(x: 0.5, y: 1.0)   // 自下而上
-            g.endPoint = CGPoint(x: 0.5, y: 0.0)
+            // 与旧版 LinearGradient(colors:[accent, live], .bottom → .top) 一致：
+            // 层坐标原点在左下，(0.5,0) 即底部 ⇒ accent 在下、live 在上。
+            g.startPoint = CGPoint(x: 0.5, y: 0.0)
+            g.endPoint = CGPoint(x: 0.5, y: 1.0)
             layer?.addSublayer(g)
             bars.append(g)
         }
@@ -56,13 +61,24 @@ final class MeterWaveView: NSView {
         CATransaction.setDisableActions(true)
         let totalSpacing = spacing * CGFloat(bars.count - 1)
         let bw = max(1, (bounds.width - totalSpacing) / CGFloat(bars.count))
-        for (i, g) in bars.enumerated() {
+
+        // 先算各柱高度，再取最高者：整簇在竖直方向居中、各柱底对齐，
+        // 与旧版 `HStack(alignment: .bottom).frame(height: 44)` 的视觉一致 —— 向上生长。
+        var heights: [CGFloat] = []
+        heights.reserveCapacity(bars.count)
+        for i in 0..<bars.count {
             let base: CGFloat = 6
             let noise = CGFloat((i * 37) % 23) / 23 * 10
             let live = CGFloat(level) * 26
-            let h = min(bounds.height, base + noise + live * (i % 3 == 0 ? 1 : 0.6))
+            heights.append(min(bounds.height, base + noise + live * (i % 3 == 0 ? 1 : 0.6)))
+        }
+        let hMax = heights.max() ?? 0
+        let bottomInset = max(0, (bounds.height - hMax) / 2)
+
+        for (i, g) in bars.enumerated() {
+            let h = heights[i]
             g.frame = CGRect(x: CGFloat(i) * (bw + spacing),
-                             y: bounds.height - h,
+                             y: bottomInset,          // 底对齐（原点在左下 → 向上生长）
                              width: bw,
                              height: h)
             g.cornerRadius = bw / 2
