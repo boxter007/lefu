@@ -19,7 +19,7 @@ extension MusicSource {
 // MARK: - 音源登记处
 // 内置音源清单与解析逻辑：监听层/设置页只认这里，不再写死任何 bundle。
 final class SourceRegistry {
-    static let shared = SourceRegistry(sources: [SodaSource.self, AppleMusicSource.self, NetEaseSource.self, KuwoSource.self])
+    static let shared = SourceRegistry(sources: [SodaSource.self, AppleMusicSource.self, NetEaseSource.self, KuwoSource.self, KuGouSource.self])
 
     private let types: [any MusicSource.Type]
 
