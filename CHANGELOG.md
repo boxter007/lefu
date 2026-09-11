@@ -3,7 +3,7 @@
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)；条目组织参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 构建号由打包脚本自动递增（见 [`VERSION`](VERSION) 与 [`scripts/build_app.sh`](scripts/build_app.sh)），应用内「设置 → 引擎（高级）→ 版本」可查看当前安装的版本。
 
-## [未发布] — 计划 v1.0.2
+## [1.0.2] — 2026-09-11
 
 底层加固：安装链路补上完整性校验、日志加上容量上限、签名去掉废弃用法并纳入校验。不涉及界面与录制逻辑。
 
@@ -52,5 +52,6 @@
 - 菜单栏挂机监听：开播自动采诗，停播自动收卷
 - 府库按日期归档，应用内查看今日成果与最近入库
 
+[1.0.2]: https://github.com/boxter007/lefu/releases/tag/v1.0.2
 [1.0.1]: https://github.com/boxter007/lefu/releases/tag/v1.0.1
 [1.0.0]: https://github.com/boxter007/lefu/releases/tag/v1.0.0
