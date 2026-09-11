@@ -149,6 +149,9 @@ final class SessionController: ObservableObject {
     private var bgBusy = false
     private var bgLastElapsed: Double = -1
     private var bgStallSince: Date?
+    /// Fix 4 可诊断：上一次记入诊断的「无法解析」bundle（nil/空/未知）——仅在值变化时记一条，避免每拍刷屏
+    private var lastIgnoredBundle: String?
+    private var hasLoggedIgnoredBundle = false
 
     // 逐首录制状态（切歌即分文件，一首一收卷）
     private var songIndex = 0                     // 当前文件序号（song-001…）
@@ -348,7 +351,13 @@ final class SessionController: ObservableObject {
             Task { @MainActor in
                 guard let self, let info, !info.title.isEmpty else { return }
                 // 门禁：系统正在播放的不是已启用音源 → 提前退出，不更新头部、不确认、不录
-                guard SourceRegistry.shared.isEnabled(info.clientBundle, enabled: self.settings.enabledSourceIDs) else { return }
+                guard SourceRegistry.shared.isEnabled(info.clientBundle, enabled: self.settings.enabledSourceIDs) else {
+                    // 无法解析的 bundle（nil/空/未知）被 fail-closed 丢弃 → 按值变化限流记一条，便于诊断（不改门禁）
+                    if SourceRegistry.shared.profile(forBundle: info.clientBundle) == nil {
+                        self.noteIgnoredBundle(info.clientBundle)
+                    }
+                    return
+                }
                 self.currentSourceProfile = SourceRegistry.shared.profile(forBundle: info.clientBundle)
                 self.currentTrack = info                       // 头部卡片实时（候选也预览）
                 self.updateArtwork(info)
@@ -924,15 +933,28 @@ final class SessionController: ObservableObject {
         }
     }
 
+    /// fail-closed 可诊断：bundle 无法解析为已知音源时，仅当被忽略的 bundle 值变化才记一条诊断日志
+    private func noteIgnoredBundle(_ bundle: String?) {
+        if hasLoggedIgnoredBundle && lastIgnoredBundle == bundle { return }
+        hasLoggedIgnoredBundle = true
+        lastIgnoredBundle = bundle
+        Diag.log("SC 忽略非启用音源 bundle=\(bundle ?? "nil")")
+    }
+
     private func bgHandle(_ info: TrackInfo?) {
-        // 门禁：非启用音源对挂机层完全不可见（不自动开录，也不参与停播计时）
-        if let info, !SourceRegistry.shared.isEnabled(info.clientBundle, enabled: settings.enabledSourceIDs) {
-            return
+        // 门禁：非启用音源不自动开录、不更新档案；但 .live 时仍参与停播计时，
+        // 否则被禁用/未知的音源顶掉「正在播放」后计时被饿死，「停播 6s 自动收卷」永不触发。
+        let srcEnabled = info.map { SourceRegistry.shared.isEnabled($0.clientBundle, enabled: settings.enabledSourceIDs) } ?? false
+        if let info, !srcEnabled,
+           SourceRegistry.shared.profile(forBundle: info.clientBundle) == nil {
+            noteIgnoredBundle(info.clientBundle)   // fail-closed 可诊断（按 bundle 值变化限流）
         }
-        if let info { currentSourceProfile = SourceRegistry.shared.profile(forBundle: info.clientBundle) }
+        if srcEnabled, let info {
+            currentSourceProfile = SourceRegistry.shared.profile(forBundle: info.clientBundle)
+        }
         switch state {
         case .idle, .done:
-            guard let info,
+            guard srcEnabled, let info,
                   envChecks.first(where: { $0.id == "blackhole" })?.status == .ok else { break }
             // 必须确认真的在播才自动开录（汽水暂停时 info 仍非空）
             if bgIsPlaying(info) {
@@ -942,7 +964,8 @@ final class SessionController: ObservableObject {
                 startSession()
             }
         case .live:
-            let playing = info.map(bgIsPlaying) ?? false
+            // 禁用/未知音源（或 info 缺失）一律视为「没在播」，停播计时照走
+            let playing = srcEnabled && (info.map(bgIsPlaying) ?? false)
             if playing {
                 bgStallSince = nil
             } else {

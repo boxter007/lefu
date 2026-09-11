@@ -34,15 +34,14 @@ public struct SourceProfile: Sendable, Identifiable {
     public let symbolName: String
     public let detection: DetectionProfile
     public let control: ControlChannel
-    public let lyricsBackendIDs: [String]
     public let enabledByDefault: Bool
     public init(id: SourceID, displayName: String, bundleIDs: Set<String>,
                 symbolName: String, detection: DetectionProfile = DetectionProfile(),
-                control: ControlChannel = .mediaRemote, lyricsBackendIDs: [String] = [],
+                control: ControlChannel = .mediaRemote,
                 enabledByDefault: Bool = false) {
         self.id = id; self.displayName = displayName; self.bundleIDs = bundleIDs
         self.symbolName = symbolName; self.detection = detection; self.control = control
-        self.lyricsBackendIDs = lyricsBackendIDs; self.enabledByDefault = enabledByDefault
+        self.enabledByDefault = enabledByDefault
     }
 }
 

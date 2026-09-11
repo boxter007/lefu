@@ -12,7 +12,6 @@ final class SodaSource: MusicSource {
         detection: DetectionProfile(confirmTicks: 2, pollInterval: 1.0,
                                     playSignal: .ratePreferred, exposesElapsed: false),
         control: .nowPlayingCLI,
-        lyricsBackendIDs: ["soda.local"],
         enabledByDefault: true)
 
     /// 汽水本地歌词：entries.db 的 KRC/LRC（零联网）

@@ -46,6 +46,15 @@ struct SettingsView: View {
                                 .labelsHidden()
                         }
                     }
+                    if settings.enabledSourceIDs.isEmpty {
+                        Text("未选择任何音源：不会录制任何内容")
+                            .font(.system(size: 11))
+                            .foregroundColor(th.live)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 14)
+                            .padding(.top, 2)
+                            .padding(.bottom, 10)
+                    }
                 }
 
                 groupTitle("歌词与封面")

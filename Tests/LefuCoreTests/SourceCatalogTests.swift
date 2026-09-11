@@ -7,14 +7,14 @@ final class SourceCatalogTests: XCTestCase {
             id: SourceID(raw: "soda"), displayName: "汽水音乐",
             bundleIDs: ["com.soda.music"], symbolName: "music.note",
             detection: DetectionProfile(), control: .nowPlayingCLI,
-            lyricsBackendIDs: ["soda.local"], enabledByDefault: true)
+            enabledByDefault: true)
     }
     private func netease() -> SourceProfile {
         SourceProfile(
             id: SourceID(raw: "netease"), displayName: "网易云音乐",
             bundleIDs: ["com.netease.163music"], symbolName: "cloud",
             detection: DetectionProfile(playSignal: .elapsedAdvance),
-            control: .mediaRemote, lyricsBackendIDs: [], enabledByDefault: false)
+            control: .mediaRemote, enabledByDefault: false)
     }
 
     func testResolveByBundleID() {

@@ -33,11 +33,7 @@ final class SourceRegistry {
         SourceCatalog.resolve(bundleID: bundleID, in: allProfiles)
     }
 
-    func profile(forID id: String) -> SourceProfile? {
-        allProfiles.first { $0.id.raw == id }
-    }
-
-    /// 解析某个音源档案声明的本地歌词后端（按注册类型取；未登记返回空）
+    /// 解析某音源声明的本地歌词后端：由 MusicSource 类型自身声明（单一真源），按注册类型取；未登记返回空
     func backends(for profile: SourceProfile) -> [LyricsBackend] {
         types.first { $0.profile.id == profile.id }?.lyricsBackends ?? []
     }
