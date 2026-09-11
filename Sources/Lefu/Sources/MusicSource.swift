@@ -7,10 +7,13 @@ protocol MusicSource: AnyObject {
     static var profile: SourceProfile { get }
     /// 本地歌词后端（零联网）。不实现者默认无本地歌词能力。
     static var lyricsBackends: [LyricsBackend] { get }
+    /// 本地封面提供者（系统不上报封面时兜底）。不实现者默认无此能力。
+    static var artworkProvider: LocalArtworkProviding? { get }
 }
 
 extension MusicSource {
     static var lyricsBackends: [LyricsBackend] { [] }
+    static var artworkProvider: LocalArtworkProviding? { nil }
 }
 
 // MARK: - 音源登记处
@@ -36,6 +39,11 @@ final class SourceRegistry {
     /// 解析某音源声明的本地歌词后端：由 MusicSource 类型自身声明（单一真源），按注册类型取；未登记返回空
     func backends(for profile: SourceProfile) -> [LyricsBackend] {
         types.first { $0.profile.id == profile.id }?.lyricsBackends ?? []
+    }
+
+    /// 解析某音源声明的本地封面提供者；未登记返回空
+    func artworkProvider(for profile: SourceProfile) -> LocalArtworkProviding? {
+        types.first { $0.profile.id == profile.id }?.artworkProvider
     }
 
     /// 门禁：该 App 标识解析出的音源必须在已启用集合内

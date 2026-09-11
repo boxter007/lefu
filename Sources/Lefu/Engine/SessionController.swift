@@ -349,7 +349,7 @@ final class SessionController: ObservableObject {
         // 切歌瞬间 A→B→A→B 的抖动一拍即逝，永远到不了确认线；B 稳定后才一次性顺序执行收卷+换文件+入列。
         monitor.onUpdate = { [weak self] info in
             Task { @MainActor in
-                guard let self, let info, !info.title.isEmpty else { return }
+                guard let self, var info = info, !info.title.isEmpty else { return }
                 // 门禁：系统正在播放的不是已启用音源 → 提前退出，不更新头部、不确认、不录
                 guard SourceRegistry.shared.isEnabled(info.clientBundle, enabled: self.settings.enabledSourceIDs) else {
                     // 无法解析的 bundle（nil/空/未知）被 fail-closed 丢弃 → 按值变化限流记一条，便于诊断（不改门禁）
@@ -358,7 +358,13 @@ final class SessionController: ObservableObject {
                     }
                     return
                 }
-                self.currentSourceProfile = SourceRegistry.shared.profile(forBundle: info.clientBundle)
+                let profile = SourceRegistry.shared.profile(forBundle: info.clientBundle)
+                self.currentSourceProfile = profile
+                // 本地封面兜底：系统未上报封面时向音源取（如酷我 HDPicture），取到与否只影响封面
+                if info.artwork == nil, let profile,
+                   let provider = SourceRegistry.shared.artworkProvider(for: profile) {
+                    info.artwork = provider.artwork(title: info.title, artist: info.artist, album: info.album)
+                }
                 self.currentTrack = info                       // 头部卡片实时（候选也预览）
                 self.updateArtwork(info)
 

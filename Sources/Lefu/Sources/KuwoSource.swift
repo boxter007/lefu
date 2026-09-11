@@ -15,4 +15,9 @@ final class KuwoSource: MusicSource {
                                     exposesElapsed: true, exposesDuration: true),
         control: .nowPlayingCLI,
         enabledByDefault: false)
+
+    /// 酷我本地歌词：DocumentData/Lyric 的加密 .lrcx（零联网；去逐字标记后整行）
+    static let lyricsBackends: [LyricsBackend] = [KuwoLocalLyricsBackend()]
+    /// 酷我本地封面：DocumentData/HDPicture（酷我不上报封面到系统）
+    static let artworkProvider: LocalArtworkProviding? = KuwoLocalArtwork()
 }
