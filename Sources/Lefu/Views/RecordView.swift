@@ -87,7 +87,7 @@ struct RecordView: View {
                     .overlay(Circle().stroke(th.border2, lineWidth: 1))
                 Image(systemName: "play.fill")
                     .font(.system(size: 42, weight: .medium))
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
                     .offset(x: 3)
             }
             .frame(width: 200, height: 200)
@@ -154,7 +154,7 @@ struct RecordView: View {
                                         } else {
                                             Image(systemName: extIcon(item.id.pathExtension))
                                                 .font(.system(size: 10, weight: .semibold))
-                                                .foregroundColor(th.accent)
+                                                .foregroundColor(th.accentText)
                                                 .frame(width: 28, height: 28)
                                                 .background(RoundedRectangle(cornerRadius: 7).fill(th.panel2))
                                         }
@@ -190,7 +190,7 @@ struct RecordView: View {
             HStack(spacing: 8) {
                 Image(systemName: settings.backgroundMonitor ? "eye.fill" : "eye")
                     .font(.system(size: 12))
-                    .foregroundColor(settings.backgroundMonitor ? th.accent : th.text2)
+                    .foregroundColor(settings.backgroundMonitor ? th.accentText : th.text2)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("挂机监听")
                         .font(.system(size: 11, weight: .medium))
@@ -218,7 +218,7 @@ struct RecordView: View {
         HStack(spacing: 7) {
             Image(systemName: icon)
                 .font(.system(size: 13))
-                .foregroundColor(th.accent)
+                .foregroundColor(th.accentText)
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
                     .font(.system(size: 18, weight: .semibold, design: .rounded).monospacedDigit())
@@ -412,7 +412,7 @@ struct RecordView: View {
                 Text("正在采录")
                     .font(.lefu(.subheadline).weight(.semibold))
                     .tracking(3)
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
                 // 以下各行全部固定高度 + 透明占位：内容来去布局纹丝不动
                 Text(session.currentTrack?.title ?? "等待正在播放…")
                     .font(.lefu(.largeTitle))
@@ -468,7 +468,7 @@ struct RecordView: View {
     /// 逐字着色：已唱完亮、正在唱用强调色、未唱暗
     private func wordColor(_ w: LyricWord) -> Color {
         if songPos >= w.start + w.duration { return th.text }
-        if songPos >= w.start { return th.accent }
+        if songPos >= w.start { return th.accentText }
         return th.text2.opacity(0.55)
     }
 
@@ -569,7 +569,7 @@ struct RecordView: View {
                 // 切歌打点的歌从 0 播：采录时长 + 确认前已播的头，夹在总时长内
                 Text("\(mmss(songPos)) / \(durText)")
                     .font(.system(size: 11, design: .rounded).monospacedDigit())
-                    .foregroundColor(th.accent.opacity(0.9))
+                    .foregroundColor(th.accentText.opacity(0.9))
             }
         case .captured:
             Text(row.sizeBytes > 0 ? "✓ \(mbStr(row.sizeBytes)) · \(mmss(row.seconds))" : "✓ 完成")
@@ -607,7 +607,7 @@ struct RecordView: View {
         if row.status == .captured { return th.ok }
         if row.status == .skipped { return th.skip }
         if row.stageLabel.contains("失败") { return failColor }
-        return th.accent
+        return th.accentText
     }
 
     private func artColor(for row: TrackRow) -> Color {
@@ -630,7 +630,7 @@ struct RecordView: View {
         case .recording:
             Label("采录中", systemImage: "circle.fill")
                 .font(.system(size: 11))
-                .foregroundColor(th.accent)
+                .foregroundColor(th.accentText)
         case .pending:
             Text("收卷中")
                 .font(.system(size: 11))
@@ -666,7 +666,7 @@ struct RecordView: View {
             HStack(spacing: 8) {
                 Image(systemName: "scissors")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
                 Text("收卷裁曲")
                     .font(.lefu(.headline))
                     .tracking(4)
@@ -821,7 +821,7 @@ struct RecordView: View {
                 .frame(width: 5, height: 5)
             Text(name)
                 .font(.system(size: 11))
-                .foregroundColor(state == 0 ? th.text2 : (state == 1 ? th.accent : th.ok))
+                .foregroundColor(state == 0 ? th.text2 : (state == 1 ? th.accentText : th.ok))
         }
     }
 
@@ -840,7 +840,7 @@ struct RecordView: View {
         case .failed: return failColor
         case .skipped: return th.skip
         case .queue: return th.text2
-        default: return th.accent
+        default: return th.accentText
         }
     }
 
@@ -941,7 +941,7 @@ struct RecordView: View {
                     RoundedRectangle(cornerRadius: 18).fill(th.panel2).frame(width: 72, height: 72)
                     Image(systemName: "speaker.wave.2")
                         .font(.system(size: 30))
-                        .foregroundColor(th.accent)
+                        .foregroundColor(th.accentText)
                 }
                 Text("先装一个 BlackHole")
                     .font(.system(size: 18, weight: .medium))
@@ -1008,7 +1008,7 @@ struct RecordView: View {
                     RoundedRectangle(cornerRadius: 18).fill(th.panel2).frame(width: 72, height: 72)
                     Image(systemName: "hifispeaker.2")
                         .font(.system(size: 30))
-                        .foregroundColor(th.accent)
+                        .foregroundColor(th.accentText)
                 }
                 Text("接通采诗通道")
                     .font(.system(size: 18, weight: .medium))

@@ -51,6 +51,7 @@ struct LefuTheme {
     let text3: Color
     let accent: Color
     let accentContrast: Color
+    let accentText: Color
     let live: Color
     let ok: Color
     let skip: Color
@@ -76,6 +77,7 @@ extension LefuTheme {
         text3: Color.p3(0.44, 0.40, 0.48),
         accent: Color.p3(1.00, 0.62, 0.72),      // P3 粉，更透亮
         accentContrast: Color.p3(0.08, 0.07, 0.10),
+        accentText: Color.p3(1.00, 0.62, 0.72),  // 文本强调色，默认同 accent
         live: Color.p3(1.00, 0.50, 0.18),        // P3 橙，live 专用
         ok: Color.p3(0.24, 0.80, 0.36),
         skip: Color.p3(0.44, 0.44, 0.48),
@@ -94,19 +96,20 @@ extension LefuTheme {
         text3: Color.p3(0.70, 0.67, 0.74),
         accent: Color.p3(0.86, 0.28, 0.47),      // P3 玫红
         accentContrast: .white,
+        accentText: Color.p3(0.86, 0.28, 0.47),  // 文本强调色，默认同 accent
         live: Color.p3(0.90, 0.33, 0.12),
         ok: Color.p3(0.03, 0.50, 0.35),
         skip: Color.p3(0.66, 0.64, 0.69),
         shadow: Color(red: 0.2, green: 0.12, blue: 0.25).opacity(0.10)
     )
 
-    /// 运行时主题：只替换 accent / accentContrast，其余 token 保持基主题。
+    /// 运行时主题：只替换 accent / accentContrast / accentText，其余 token 保持基主题。
     /// 用 memberwise init（字段名与声明严格对齐）。
-    func withAccent(_ accent: Color, contrast: Color) -> LefuTheme {
+    func withAccent(_ accent: Color, accentText: Color, contrast: Color) -> LefuTheme {
         LefuTheme(bg: bg, panel: panel, panel2: panel2, rail: rail,
                   border: border, border2: border2,
                   text: text, text2: text2, text3: text3,
-                  accent: accent, accentContrast: contrast,
+                  accent: accent, accentContrast: contrast, accentText: accentText,
                   live: live, ok: ok, skip: skip, shadow: shadow)
     }
 }

@@ -39,7 +39,7 @@ struct RootView: View {
                 Color.clear.frame(width: 64)
                 Image(systemName: "music.quarternote.3")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
                 Text("乐府")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(th.text)
@@ -161,7 +161,7 @@ struct RootView: View {
                     .scaleEffect(active ? 1.0 : (hoveredPage == p ? 1.06 : 1.0))
                 Text(p.rawValue)
                     .font(.system(size: 11, weight: active ? .medium : .regular))
-                    .foregroundColor(active ? th.accent : th.text2)
+                    .foregroundColor(active ? th.accentText : th.text2)
             }
             .frame(width: 52)
             .contentShape(Rectangle())

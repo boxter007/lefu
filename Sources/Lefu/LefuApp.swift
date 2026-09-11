@@ -1,4 +1,5 @@
 import SwiftUI
+import LefuCore
 
 // MARK: - 入口
 @main
@@ -53,7 +54,10 @@ struct LefuApp: App {
     }
 
     /// 基主题 + 当前封面主色派生。coverAccent 已是 Color?（Task 2 已从 NSColor 转换），
-    /// 无封面/灰阶时为 nil → 回落基主题。contrast 按深浅主题取可读前景。
+    /// 无封面/灰阶时为 nil → 回落基主题。
+    ///
+    /// 封面色只作装饰强调色；文本强调色 accentText 以面板底色为背景重新派生，
+    /// 保证小字 / 图标前景 >= 4.5:1。填充上的前景墨色 accentContrast 按强调色亮度选取。
     private var theme: LefuTheme {
         let base: LefuTheme
         switch settings.themeMode {
@@ -63,7 +67,32 @@ struct LefuApp: App {
         case .dark: base = .dark
         }
         guard let accent = session.coverAccent else { return base }
-        return base.withAccent(accent, contrast: isDark ? Color.p3(0.08, 0.07, 0.10) : .white)
+
+        let accentRGB = Self.srgbComponents(accent)
+        // 文本强调色：达不到 4.5:1 就沿亮度修正；转换失败时回落基主题。
+        let accentText: Color
+        if let accentRGB, let panelRGB = Self.srgbComponents(base.panel) {
+            let safe = AccentDerivation.contrastSafe(accentRGB, against: panelRGB, minRatio: 4.5)
+            accentText = Color(.sRGB, red: safe.r, green: safe.g, blue: safe.b, opacity: 1)
+        } else {
+            accentText = base.accentText
+        }
+
+        // 填充上的前景墨色：强调色偏亮用深墨，偏暗用白。
+        let accentContrast: Color
+        if let luminance = accentRGB?.relativeLuminance {
+            accentContrast = luminance > 0.5 ? Color.p3(0.08, 0.07, 0.10) : .white
+        } else {
+            accentContrast = isDark ? Color.p3(0.08, 0.07, 0.10) : .white
+        }
+
+        return base.withAccent(accent, accentText: accentText, contrast: accentContrast)
+    }
+
+    /// 把 SwiftUI Color 转到 sRGB 分量；无法转换（如动态/非 RGB 色）时返回 nil。
+    private static func srgbComponents(_ color: Color) -> RGB? {
+        guard let ns = NSColor(color).usingColorSpace(.sRGB) else { return nil }
+        return RGB(r: Double(ns.redComponent), g: Double(ns.greenComponent), b: Double(ns.blueComponent))
     }
 
     private var isDark: Bool {

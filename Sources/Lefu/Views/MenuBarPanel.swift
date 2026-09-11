@@ -23,7 +23,7 @@ struct MenuBarPanel: View {
         HStack(spacing: 8) {
             Image(systemName: "music.quarternote.3")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(th.accent)
+                .foregroundColor(th.accentText)
             Text("乐府")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundColor(th.text)
@@ -50,7 +50,7 @@ struct MenuBarPanel: View {
     private var chipColor: Color {
         switch session.state {
         case .live: return th.live
-        case .cutting: return th.accent
+        case .cutting: return th.accentText
         case .done: return th.ok
         case .idle: return th.text3
         }
@@ -152,7 +152,7 @@ struct MenuBarPanel: View {
         HStack(spacing: 10) {
             Image(systemName: settings.backgroundMonitor ? "eye.fill" : "eye")
                 .font(.system(size: 13))
-                .foregroundColor(settings.backgroundMonitor ? th.accent : th.text3)
+                .foregroundColor(settings.backgroundMonitor ? th.accentText : th.text3)
                 .frame(width: 18)
             VStack(alignment: .leading, spacing: 1) {
                 Text("挂机监听")

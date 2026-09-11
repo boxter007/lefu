@@ -53,7 +53,7 @@ struct GuideView: View {
                 ).frame(width: 56, height: 56)
                 Image(systemName: "book.pages")
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text("乐府指南")
@@ -84,7 +84,7 @@ struct GuideView: View {
                     ).frame(width: 44, height: 44)
                     Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(th.accent)
+                        .foregroundColor(th.accentText)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("采诗通道 · 需要你手动建一次")
@@ -192,7 +192,7 @@ struct GuideView: View {
                 .background(Circle().fill(th.accent))
             Image(systemName: icon)
                 .font(.system(size: 12))
-                .foregroundColor(th.accent)
+                .foregroundColor(th.accentText)
                 .padding(.top, 2)
             Text(text)
                 .font(.system(size: 12))
@@ -234,7 +234,7 @@ struct GuideView: View {
             arrowDown
             HStack(spacing: 10) {
                 flowNode(icon: "waveform.badge.plus", title: "BlackHole", desc: "乐府从这里录", tint: th.live)
-                flowNode(icon: "hifispeaker", title: "扬声器", desc: "你照常听", tint: th.accent)
+                flowNode(icon: "hifispeaker", title: "扬声器", desc: "你照常听", tint: th.accentText)
             }
             flowRow(icon: "scissors", title: "实时裁歌", desc: "按切歌点切段 → 配歌词 → 编码 → 写标签封面 → 入库")
         }
@@ -256,7 +256,7 @@ struct GuideView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 13))
-                .foregroundColor(th.accent)
+                .foregroundColor(th.accentText)
                 .frame(width: 28, height: 28)
                 .background(RoundedRectangle(cornerRadius: 7).fill(th.panel2))
             Text(title).font(.system(size: 12, weight: .semibold)).foregroundColor(th.text)
@@ -297,7 +297,7 @@ struct GuideView: View {
                 HStack(spacing: 8) {
                     Image(systemName: open ? "chevron.down.circle.fill" : "chevron.right.circle")
                         .font(.system(size: 12))
-                        .foregroundColor(th.accent)
+                        .foregroundColor(th.accentText)
                     Text(q).font(.system(size: 13, weight: .medium)).foregroundColor(th.text)
                     Spacer()
                 }
@@ -331,7 +331,7 @@ struct GuideView: View {
             HStack(spacing: 10) {
                 Image(systemName: "menubar.dock.rectangle")
                     .font(.system(size: 14))
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("菜单栏控制台").font(.system(size: 12, weight: .semibold)).foregroundColor(th.text)
                     Text("关窗后乐府常驻菜单栏：看状态、收卷、开挂机监听都在那点").font(.system(size: 10)).foregroundColor(th.text3)
@@ -342,7 +342,7 @@ struct GuideView: View {
             HStack(spacing: 10) {
                 Image(systemName: "circle.and.line.horizontal")
                     .font(.system(size: 14))
-                    .foregroundColor(th.accent)
+                    .foregroundColor(th.accentText)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("下一阕").font(.system(size: 12, weight: .semibold)).foregroundColor(th.text)
                     Text("采诗中手动打点：当前歌从这句开始算作下一首").font(.system(size: 10)).foregroundColor(th.text3)

@@ -154,7 +154,7 @@ struct SettingsView: View {
     private func envColor(_ s: EnvCheck.Status) -> Color {
         switch s {
         case .pending: return th.text3
-        case .checking: return th.accent
+        case .checking: return th.accentText
         case .ok: return th.ok
         case .fail: return Color(red: 0xE2/255, green: 0x4B/255, blue: 0x4A/255)
         }
