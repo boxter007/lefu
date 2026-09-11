@@ -47,7 +47,7 @@ struct RecordView: View {
     @State private var haloOn = false
     @State private var ringHover = false
     @State private var guideDismissed = false
-    @State private var previousTrackRowCount = 0   // 曲目列表自动滚底：记录上一次行数
+    @State private var previousTrackRowCount = 0   // 曲目列表自动滚底：记录上一次行数（onAppear 会按当前行数对齐）
     private var idleView: some View {
         VStack(spacing: 6) {
             startRing
@@ -341,11 +341,24 @@ struct RecordView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 5) {
+                            LazyVStack(spacing: 5) {
                                 ForEach(session.trackRows) { row in
                                     trackRow(row)
                                         .id(row.id)
                                 }
+                            }
+                        }
+                        .onAppear {
+                            // 点红叉关窗后视图树被销毁，再打开时滚动位置归零 → 这里主动回到「正在采录的一行」，
+                            // 而不是停在列表最顶部；顺带对齐行数基线，避免首次增长被误判。
+                            // LazyVStack 首帧可能还没铺好目标行（上百行时更明显），两次尝试兜底
+                            previousTrackRowCount = session.trackRows.count
+                            guard let id = activeRowID else { return }
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(id, anchor: .center)
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                                proxy.scrollTo(id, anchor: .center)
                             }
                         }
                         .onChange(of: session.trackRows.count) { newCount in
@@ -452,31 +465,9 @@ struct RecordView: View {
         return palette[idx]
     }
 
-    // 波形
+    // 波形（独立小视图，只订阅电平表：电平每秒 20+ 次刷新不再带着整个录制台重绘）
     private var wave: some View {
-        HStack(alignment: .bottom, spacing: 3) {
-            ForEach(0..<48, id: \.self) { i in
-                Capsule()
-                    .fill(
-                        LinearGradient(colors: [th.accent, th.live],
-                                       startPoint: .bottom, endPoint: .top)
-                            .opacity(barOpacity(for: i))
-                    )
-                    .frame(height: barHeight(for: i))
-            }
-        }
-        .frame(height: 44)
-    }
-
-    private func barOpacity(for i: Int) -> Double {
-        session.level > Float(i % 12) / 12 ? 1.0 : 0.28
-    }
-
-    private func barHeight(for i: Int) -> CGFloat {
-        let base: CGFloat = 6
-        let noise = CGFloat((i * 37) % 23) / 23 * 10
-        let live = CGFloat(session.level) * 26
-        return base + noise + live * (i % 3 == 0 ? 1 : 0.6)
+        LevelWave(meter: session.meter, theme: th)
     }
 
     // 序号列宽：随最大序号位数自适应（2 位 20pt，100+ 首时 3 位也不换行；所有行同宽不错位）
@@ -484,6 +475,11 @@ struct RecordView: View {
         let maxID = session.trackRows.map(\.id).max() ?? 0
         let digits = max(2, String(maxID).count)
         return max(20, CGFloat(digits) * 7.4 + 2)
+    }
+
+    /// 正在采录的行号（没有采录中则取最后一行）：窗口关闭后再打开时用它把列表带回「当前这条」
+    private var activeRowID: Int? {
+        session.trackRows.last(where: { $0.status == .recording })?.id ?? session.trackRows.last?.id
     }
 
     // 曲目行（参考图样式：缩略图 + 序号 + 歌名 + 歌手 + 状态，行高加大）
@@ -1046,6 +1042,38 @@ struct RecordView: View {
         }
         .allowsHitTesting(false)
         .transition(.opacity)
+    }
+}
+
+// MARK: - 电平波形（独立订阅 LevelMeter：电平高频刷新只重绘本视图）
+struct LevelWave: View {
+    @ObservedObject var meter: LevelMeter
+    let theme: LefuTheme
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            ForEach(0..<48, id: \.self) { i in
+                Capsule()
+                    .fill(
+                        LinearGradient(colors: [theme.accent, theme.live],
+                                       startPoint: .bottom, endPoint: .top)
+                            .opacity(barOpacity(for: i))
+                    )
+                    .frame(height: barHeight(for: i))
+            }
+        }
+        .frame(height: 44)
+    }
+
+    private func barOpacity(for i: Int) -> Double {
+        meter.level > Float(i % 12) / 12 ? 1.0 : 0.28
+    }
+
+    private func barHeight(for i: Int) -> CGFloat {
+        let base: CGFloat = 6
+        let noise = CGFloat((i * 37) % 23) / 23 * 10
+        let live = CGFloat(meter.level) * 26
+        return base + noise + live * (i % 3 == 0 ? 1 : 0.6)
     }
 }
 

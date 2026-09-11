@@ -117,27 +117,9 @@ struct MenuBarPanel: View {
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(th.border, lineWidth: 0.5))
     }
 
-    // MARK: 电平小波形（采诗中才有）
+    // MARK: 电平小波形（采诗中才有；独立订阅电平表，高频刷新只重绘本视图）
     private var levelBars: some View {
-        HStack(spacing: 2.5) {
-            ForEach(0..<4, id: \.self) { i in
-                let h: CGFloat = {
-                    let base = Double(levelSeed(i)) * Double(session.level)
-                    return max(5, min(22, CGFloat(6 + base * 26)))
-                }()
-                Capsule()
-                    .fill(th.live.opacity(0.85))
-                    .frame(width: 3, height: h)
-            }
-        }
-        .frame(height: 24, alignment: .bottom)
-        .opacity(session.state == .live ? 1 : 0.35)
-        .animation(.easeOut(duration: 0.12), value: session.level)
-    }
-
-    private func levelSeed(_ i: Int) -> Double {
-        // 固定权重让四根柱子错落，而不是同涨同跌
-        [0.55, 0.85, 0.7, 0.4][i % 4]
+        MiniLevelBars(meter: session.meter, live: session.state == .live, theme: th)
     }
 
     // MARK: 主按钮
@@ -219,4 +201,28 @@ struct MenuBarPanel: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+// MARK: - 迷你电平条（独立订阅 LevelMeter：电平高频刷新只重绘四根柱子）
+struct MiniLevelBars: View {
+    @ObservedObject var meter: LevelMeter
+    let live: Bool
+    let theme: LefuTheme
+
+    var body: some View {
+        HStack(spacing: 2.5) {
+            ForEach(0..<4, id: \.self) { i in
+                let base = Double(seed(i)) * Double(meter.level)
+                Capsule()
+                    .fill(theme.live.opacity(0.85))
+                    .frame(width: 3, height: max(5, min(22, CGFloat(6 + base * 26))))
+            }
+        }
+        .frame(height: 24, alignment: .bottom)
+        .opacity(live ? 1 : 0.35)
+        .animation(.easeOut(duration: 0.12), value: meter.level)
+    }
+
+    // 固定权重让四根柱子错落，而不是同涨同跌
+    private func seed(_ i: Int) -> Double { [0.55, 0.85, 0.7, 0.4][i % 4] }
 }

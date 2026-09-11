@@ -30,6 +30,26 @@ struct TrackRow: Identifiable {
     var midJoin: Bool = false     // 半路接入（本场第一首歌，录制起点在歌中途，绝对进度不可知）
 }
 
+// MARK: - 电平表（高频 RMS，独立 ObservableObject）
+// 为什么单独拿出来：采集 tap 每 ~46ms 回调一次（2048 帧 @44.1kHz），即每秒 20+ 次电平刷新。
+// 若把 level 挂在 SessionController 的 @Published 上，每次刷新都会让「录制台整个 body」重算——
+// 而会话队列是上百行非惰性 VStack，行数越多越贵 → 长时间录制后 CPU 常满、界面明显卡顿。
+// 独立成对象后，只有波形/电平条这类小叶子视图重绘，队列不再被电平带着一起重画。
+final class LevelMeter: ObservableObject {
+    @Published private(set) var level: Float = 0
+    private var lastPush = Date.distantPast
+
+    /// 节流：最快 ~16Hz，且要有肉眼可见的变化才发布，避免无谓刷新
+    func push(_ v: Float) {
+        let now = Date()
+        guard now.timeIntervalSince(lastPush) >= 0.06 || abs(v - level) > 0.06 else { return }
+        lastPush = now
+        level = v
+    }
+
+    func reset() { level = 0 }
+}
+
 // MARK: - 环境检查项
 struct EnvCheck: Identifiable {
     enum Status { case pending, checking, ok, fail }
@@ -85,7 +105,8 @@ final class SessionController: ObservableObject {
     @Published var lyricIndex: Int = -1
     @Published var reworkFileURL: URL?
     @Published var artworkImage: NSImage?
-    @Published var level: Float = 0
+    /// 电平表：独立对象，高频刷新只重绘波形，不惊动整个录制台（见 LevelMeter 注释）
+    let meter = LevelMeter()
     @Published var library = LibraryStats()
     @Published var installingBlackHole = false
     @Published var routeReady = false
@@ -279,7 +300,7 @@ final class SessionController: ObservableObject {
 
         // 无声自动停：阈值 60 秒（歌间串场/掌声/电台 DJ 静音都不会误触发；真停播由挂机监听的停播判定负责）
         capture.silenceLimit = settings.silenceAutoStop ? 60.0 : .infinity
-        capture.onLevel = { [weak self] level in self?.level = level }
+        capture.onLevel = { [weak self] level in self?.meter.push(level) }
         capture.onSilence = { [weak self] in
             Task { @MainActor in
                 self?.showToast("检测到静音，自动收卷")
@@ -474,6 +495,7 @@ final class SessionController: ObservableObject {
         monitor.stop()
         tickTimer?.invalidate()
         capture.stop()
+        meter.reset()
 
         if let last = trackRows.last, last.status == .recording {
             trackRows[trackRows.count - 1].status = .pending
