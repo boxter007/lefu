@@ -424,27 +424,21 @@ struct RecordView: View {
                     .lineLimit(1)
                     .foregroundColor(th.text2.opacity(subText.isEmpty ? 0 : 1))
                     .frame(height: 20, alignment: .leading)
-                // 歌词双行（占位固定；回到最初的静态双行，不用整行滚动/逐字跳动）
+                // 歌词双行（占位固定；整行滚动 + KRC 可选逐字高亮）
                 let idx = session.lyricIndex
                 let cur = session.lyrics.lines[safe: idx]
                 let next = session.lyrics.lines[safe: idx + 1]
-                HStack(spacing: 8) {
-                    // 左缘强调竖条：给静态双行一个精致的锚点（纯装饰，随当前行显隐）
-                    Capsule()
-                        .fill(th.accent.opacity(cur == nil ? 0 : 0.7))
-                        .frame(width: 3, height: 20)
-                    Text(cur?.text ?? " ")
-                        .font(.system(size: 16, weight: .semibold))
-                        .lineLimit(1)
-                        .foregroundColor(cur == nil ? .clear : th.text)
-                }
-                .frame(height: 22, alignment: .leading)
-                Text(next?.text ?? " ")
-                    .font(.system(size: 12.5))
+                lyricCurrentText(cur, nextStart: next?.start)
+                    .font(.system(size: 15, weight: .medium))
                     .lineLimit(1)
-                    .foregroundColor(next == nil ? .clear : th.text2.opacity(0.85))
+                    .frame(height: 22, alignment: .leading)
+                Text(next?.text ?? " ")
+                    .font(.lefu(.callout))
+                    .lineLimit(1)
+                    .foregroundColor(next == nil ? .clear : th.text2)
                     .frame(height: 19, alignment: .leading)
             }
+            .animation(.easeInOut(duration: 0.3), value: session.lyricIndex)
             Spacer(minLength: 0)
         }
     }
@@ -452,6 +446,30 @@ struct RecordView: View {
     private var subText: String {
         guard let t = session.currentTrack else { return "" }
         return t.artist + (t.album.isEmpty ? "" : " · " + t.album)
+    }
+
+    // MARK: 歌词当前行（KRC 逐字：已唱亮、当前词强调、未唱暗；否则整行亮）
+    private func lyricCurrentText(_ line: LyricLine?, nextStart: Double?) -> Text {
+        guard let line else { return Text(" ").foregroundColor(.clear) }
+        // 只在播放位置落在本行区间内才逐字；否则整行亮（防止行与时间基短暂错位）
+        let inLine = songPos >= line.start && (nextStart.map { songPos < $0 } ?? true)
+        guard !line.words.isEmpty, inLine else {
+            return Text(line.text).foregroundColor(th.text)
+        }
+        var attr = AttributedString()
+        for w in line.words {
+            var part = AttributedString(w.text)
+            part.foregroundColor = wordColor(w)
+            attr += part
+        }
+        return Text(attr)
+    }
+
+    /// 逐字着色：已唱完亮、正在唱用强调色、未唱暗
+    private func wordColor(_ w: LyricWord) -> Color {
+        if songPos >= w.start + w.duration { return th.text }
+        if songPos >= w.start { return th.accentText }
+        return th.text2.opacity(0.55)
     }
 
     private var artColor: Color {
