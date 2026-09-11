@@ -192,5 +192,6 @@ control 取值：
 参考实现：
 
 - 本地歌词：Sources/Lefu/Sources/SodaSource.swift 与 Sources/Lefu/Engine/SodaLocalLyricsBackend.swift
+- 本地歌词（加密 .krc，可逐字）：Sources/Lefu/Sources/KuGouSource.swift、Sources/Lefu/Engine/KuGouLocalLyricsBackend.swift
 - 本地歌词（加密 .lrcx）+ 本地封面兜底：Sources/Lefu/Sources/KuwoSource.swift、
   Sources/Lefu/Engine/KuwoLocalLyricsBackend.swift、Sources/Lefu/Engine/KuwoLocalArtwork.swift
