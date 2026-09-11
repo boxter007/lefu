@@ -13,7 +13,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 groupTitle("录制")
                 group {
-                    toggleRow("挂机监听", "检测到汽水开播自动开录，停播自动收卷（关窗后菜单栏常驻）", $settings.backgroundMonitor)
+                    toggleRow("挂机监听", "检测到所选音源开播自动开录，停播自动收卷（关窗后菜单栏常驻）", $settings.backgroundMonitor)
                     toggleRow("无声自动停", "连续静音 1 分钟自动结束录制（歌间串场不会误触发）", $settings.silenceAutoStop)
                     pickerRow("最短收录时长", "低于此时长的段落丢弃") {
                         Picker("", selection: Binding(get: { settings.minLength }, set: { settings.minLength = $0 })) {
@@ -50,7 +50,7 @@ struct SettingsView: View {
 
                 groupTitle("歌词与封面")
                 group {
-                    toggleRow("离线模式", "只用汽水本地歌词缓存，不联网", $settings.offlineMode)
+                    toggleRow("离线模式", "只用本地歌词缓存，不联网", $settings.offlineMode)
                     toggleRow("缺词联网兜底", "本地没有时按 LRCLIB → 网易云 顺序抓取", $settings.lyricFallback)
                     row("封面") {
                         Text("✓ 始终开启").font(.system(size: 11)).foregroundColor(th.ok)

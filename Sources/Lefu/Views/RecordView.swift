@@ -55,7 +55,7 @@ struct RecordView: View {
             Text("开始采诗")
                 .font(.lefu(.title2))
                 .foregroundColor(th.text)
-            Text("监听汽水正在播放的内容，边听边录，已有的歌自动跳过")
+            Text("监听所选音源正在播放的内容，边听边录，已有的歌自动跳过")
                 .font(.lefu(.callout))
                 .foregroundColor(th.text2)
                 .multilineTextAlignment(.center)
@@ -526,10 +526,13 @@ struct RecordView: View {
                     .font(.system(size: 13.5, weight: .medium))
                     .lineLimit(1)
                     .foregroundColor(th.text)
-                Text(rowSubtitle(row))
-                    .font(.system(size: 11.5))
-                    .foregroundColor(th.text2)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(rowSubtitle(row))
+                        .font(.system(size: 11.5))
+                        .foregroundColor(th.text2)
+                        .lineLimit(1)
+                    sourceBadge(row)
+                }
             }
             Spacer(minLength: 10)
             // 右缘信息：采录中→播放进度/总时长；已收录→大小·时长；其余→工序进度
@@ -553,6 +556,20 @@ struct RecordView: View {
             }
         }
         .help(row.outputPath != nil ? "点击在 Finder 中显示成品" : "点击在 Finder 中显示本首录音")
+    }
+
+    /// 来源徽章：仅在启用多个音源时显示；单源（默认仅汽水）时不出现，保持原有视觉
+    @ViewBuilder
+    private func sourceBadge(_ row: TrackRow) -> some View {
+        if settings.enabledSourceIDs.count > 1, let sourceName = row.sourceName {
+            Text(sourceName)
+                .font(.system(size: 10))
+                .foregroundColor(th.text2)
+                .lineLimit(1)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(th.panel2))
+        }
     }
 
     /// 行右缘信息文字
@@ -889,6 +906,7 @@ struct RecordView: View {
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundColor(th.text3)
                             Text(row.title).font(.system(size: 13)).foregroundColor(th.text).lineLimit(1)
+                            sourceBadge(row)
                             Spacer()
                             Text(row.artist).font(.system(size: 11)).foregroundColor(th.text2)
                             Image(systemName: "checkmark").font(.system(size: 10)).foregroundColor(th.ok)
@@ -1014,7 +1032,7 @@ struct RecordView: View {
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(th.text)
                     .padding(.top, 16)
-                Text("还差最后一步：让汽水的声音同时进 BlackHole（乐府录）和扬声器（你听）。点下面会自动切好系统输出；若还没有多输出设备，会打开音频 MIDI 设置引导你建一个「\(AudioRouting.aggregateName)」（一次性操作）。")
+                Text("还差最后一步：让你的音乐软件的声音同时进 BlackHole（乐府录）和扬声器（你听）。点下面会自动切好系统输出；若还没有多输出设备，会打开音频 MIDI 设置引导你建一个「\(AudioRouting.aggregateName)」（一次性操作）。")
                     .font(.system(size: 12))
                     .foregroundColor(th.text2)
                     .multilineTextAlignment(.center)

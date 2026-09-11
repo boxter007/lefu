@@ -16,7 +16,7 @@ struct GuideView: View {
                     Button("查看环境自检") { session.runEnvCheck() }
                         .buttonStyle(.link).font(.system(size: 11))
                 }
-                stepCard(2, "开始采诗", "在汽水音乐里放歌，回到乐府点大圆环「开始采诗」。切歌会自动实时裁歌入库；想连续挂机就打开「挂机监听」，开播自动采、停播自动收卷。") {
+                stepCard(2, "开始采诗", "在你的音乐软件里放歌，回到乐府点大圆环「开始采诗」。切歌会自动实时裁歌入库；想连续挂机就打开「挂机监听」，开播自动采、停播自动收卷。") {
                     if session.state == .live {
                         Button("收卷") { session.stopAndCut() }
                             .buttonStyle(.link).font(.system(size: 11))
@@ -30,9 +30,9 @@ struct GuideView: View {
                 sectionTitle("常见问题")
                 faqCard("录出来是静音？", "放音路由没接通。系统输出必须是「乐府 通道」多输出设备。看本页顶部的「采诗通道」卡：状态徽章显示未接通时，按卡里的三步建好，状态会实时变绿。")
                 faqCard("听不见歌了？", "说明系统输出被切到了 BlackHole 本体（虚拟黑洞，无声）或别的设备。到系统设置（或音频 MIDI 设置）把输出切回「乐府 通道」，乐府的放音路由状态会实时恢复绿灯。")
-                faqCard("歌词是空的？", "歌词按 自家缓存 → 汽水本地缓存 → LRCLIB → 网易云 顺序抓取。纯器乐或小众歌可能全网没有；联网抓到过的歌会存进缓存，之后离线也有。")
+                faqCard("歌词是空的？", "歌词按 本地歌词 -> 自家缓存 -> LRCLIB -> 网易云 顺序抓取。纯器乐或小众歌可能全网没有；联网抓到过的歌会存进缓存，之后离线也有。")
                 faqCard("需要装什么软件？", "什么都不用。MP3 编码器（LAME）已内置在 App 里，歌词零依赖，BlackHole 会引导你安装。")
-                faqCard("汽水没开播会怎样？", "开着挂机监听它就一直待命；没开播时菜单栏面板显示「府中清静」。挂机监听关着的话，点开始采诗才会录。")
+                faqCard("没开播会怎样？", "开着挂机监听它就一直待命；没开播时菜单栏面板显示「府中清静」。挂机监听关着的话，点开始采诗才会录。")
                 faqCard("成品在哪？", "默认在 ~/Music/乐府，按日期分文件夹，MP3 已内嵌封面和标签，同目录附 .lrc 歌词。可在设置页改输出位置。")
                 sectionTitle("快捷操作")
                 shortcutsCard
@@ -230,7 +230,7 @@ struct GuideView: View {
     // MARK: 原理卡
     private var principleCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            flowRow(icon: "music.note", title: "汽水音乐", desc: "正常放歌，输出走「乐府 通道」")
+            flowRow(icon: "music.note", title: "你的音乐软件", desc: "正常放歌，输出走「乐府 通道」")
             arrowDown
             HStack(spacing: 10) {
                 flowNode(icon: "waveform.badge.plus", title: "BlackHole", desc: "乐府从这里录", tint: th.live)
@@ -319,7 +319,7 @@ struct GuideView: View {
     }
 
     private var faqOrder: [String] {
-        ["录出来是静音？", "听不见歌了？", "歌词是空的？", "需要装什么软件？", "汽水没开播会怎样？", "成品在哪？"]
+        ["录出来是静音？", "听不见歌了？", "歌词是空的？", "需要装什么软件？", "没开播会怎样？", "成品在哪？"]
     }
     private func faqIndex(_ q: String) -> Int {
         faqOrder.firstIndex(of: q) ?? q.hashValue

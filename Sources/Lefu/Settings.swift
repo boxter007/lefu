@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import LefuCore
 
-// MARK: - 应用设置（四分区表单的数据源）
+// MARK: - 应用设置（多分区表单的数据源）
 final class AppSettings: ObservableObject {
     @Published var themeMode: ThemeMode { didSet { UserDefaults.standard.set(themeMode.rawValue, forKey: "themeMode") } }
     @Published var silenceAutoStop: Bool { didSet { UserDefaults.standard.set(silenceAutoStop, forKey: "silenceAutoStop") } }

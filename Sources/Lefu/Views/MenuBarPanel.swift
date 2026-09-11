@@ -105,7 +105,7 @@ struct MenuBarPanel: View {
                 Text("府中清静")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(th.text)
-                Text("汽水开播即自动采诗")
+                Text("所选音源开播即自动采诗")
                     .font(.lefu(.subheadline))
                     .foregroundColor(th.text2)
             }

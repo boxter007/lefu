@@ -30,6 +30,7 @@ struct TrackRow: Identifiable {
     var sizeBytes: Int64 = 0      // 成品大小（已收录后回填，行内展示）
     var seconds: Double = 0       // 成品时长秒（收卷统计时回填，行内展示）
     var midJoin: Bool = false     // 半路接入（本场第一首歌，录制起点在歌中途，绝对进度不可知）
+    var sourceName: String? = nil // 音源显示名（仅启用多音源时用于行内来源徽章）
 }
 
 // MARK: - 电平表（高频 RMS，独立 ObservableObject）
@@ -418,7 +419,8 @@ final class SessionController: ObservableObject {
         trackRows.append(TrackRow(id: rowID, title: info.title, artist: info.artist, album: info.album,
                                   status: exists ? .skipped : .recording,
                                   artwork: info.artwork.flatMap { NSImage(data: $0) },
-                                  midJoin: pendingEntries.isEmpty))
+                                  midJoin: pendingEntries.isEmpty,
+                                  sourceName: currentSourceProfile?.displayName))
 
         // ③ 换文件 + 收卷上一文件（首首歌沿用开录建好的 song-001，不换）
         let rotate = !pendingEntries.isEmpty
@@ -564,7 +566,8 @@ final class SessionController: ObservableObject {
         if ok {
             showToast("已切下一阕")
         } else {
-            showToast("切歌失败：没找到汽水的控制通道")
+            let name = currentSourceProfile?.displayName ?? "当前音源"
+            showToast("切歌失败：没找到\(name)的控制通道")
         }
     }
 
@@ -667,7 +670,8 @@ final class SessionController: ObservableObject {
                             self.doneStats.seconds += dur
                             self.doneStats.rows.append(TrackRow(id: 1000 + self.doneStats.rows.count,
                                                                 title: task.entry.title, artist: task.entry.artist,
-                                                                status: .captured))
+                                                                status: .captured,
+                                                                sourceName: self.currentSourceProfile?.displayName))
                             // 封卷仪式：每首成品落盘即发通知 + 一次轻触感（仅成功统计这一处，避免重复）
                             Notifier.songCaptured(title: task.entry.title, artist: task.entry.artist, cover: task.entry.cover)
                             Notifier.tap()
@@ -782,7 +786,7 @@ final class SessionController: ObservableObject {
                         self.showToast("BlackHole 已装好，环境自检中")
                         self.runEnvCheck()
                     } else {
-                        self.showToast("已安装但未枚举到驱动，试试重启汽水音乐")
+                        self.showToast("已安装但未枚举到驱动，试试重启你的音乐软件")
                         self.runEnvCheck()
                     }
                 }
