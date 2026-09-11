@@ -98,6 +98,16 @@ extension LefuTheme {
         skip: Color.p3(0.66, 0.64, 0.69),
         shadow: Color(red: 0.2, green: 0.12, blue: 0.25).opacity(0.10)
     )
+
+    /// 运行时主题：只替换 accent / accentContrast，其余 token 保持基主题。
+    /// 用 memberwise init（字段名与声明严格对齐）。
+    func withAccent(_ accent: Color, contrast: Color) -> LefuTheme {
+        LefuTheme(bg: bg, panel: panel, panel2: panel2, rail: rail,
+                  border: border, border2: border2,
+                  text: text, text2: text2, text3: text3,
+                  accent: accent, accentContrast: contrast,
+                  live: live, ok: ok, skip: skip, shadow: shadow)
+    }
 }
 
 // MARK: - 环境注入

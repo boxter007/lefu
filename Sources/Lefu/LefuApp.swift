@@ -52,13 +52,24 @@ struct LefuApp: App {
         }
     }
 
+    /// 基主题 + 当前封面主色派生。coverAccent 已是 Color?（Task 2 已从 NSColor 转换），
+    /// 无封面/灰阶时为 nil → 回落基主题。contrast 按深浅主题取可读前景。
     private var theme: LefuTheme {
+        let base: LefuTheme
         switch settings.themeMode {
         case .system:
-            return NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
-        case .light: return .light
-        case .dark: return .dark
+            base = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
+        case .light: base = .light
+        case .dark: base = .dark
         }
+        guard let accent = session.coverAccent else { return base }
+        return base.withAccent(accent, contrast: isDark ? Color.p3(0.08, 0.07, 0.10) : .white)
+    }
+
+    private var isDark: Bool {
+        settings.themeMode == .dark
+            || (settings.themeMode == .system
+                && NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua)
     }
 }
 

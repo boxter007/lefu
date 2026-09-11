@@ -5,6 +5,7 @@ struct RootView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var session: SessionController
     @Environment(\.lefuTheme) var th
+    @Environment(\.colorScheme) private var colorScheme
 
     enum Page: String, CaseIterable {
         case record = "采诗"
@@ -79,7 +80,18 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(th.bg)
+        .background {
+            // 最底层：主题底色；采诗页且正在播放时叠一层全窗模糊封面氛围
+            ZStack {
+                th.bg
+                if page == .record, session.currentTrack != nil {
+                    AmbientBackground(image: session.artworkImage,
+                                      key: session.currentTrack?.key ?? "",
+                                      isDark: colorScheme == .dark)
+                        .ignoresSafeArea()
+                }
+            }
+        }
         .ignoresSafeArea(.container, edges: .top) // 头部从窗口最顶开始，红绿灯融入同一行
         .onAppear { session.runEnvCheck() }
     }

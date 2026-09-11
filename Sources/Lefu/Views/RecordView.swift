@@ -35,7 +35,8 @@ struct RecordView: View {
                 .padding(.vertical, 20)
                 .padding(.trailing, 22)
         }
-        .background(th.bg)
+        // 有正在播放曲目时透出 RootView 的封面氛围背景；否则保持纯色页底
+        .background(session.currentTrack == nil ? th.bg : Color.clear)
         .overlay {
             if let t = session.toast {
                 toast(text: t)
