@@ -39,6 +39,9 @@ struct TrackRow: Identifiable {
 // 独立成对象后，只有波形/电平条这类小叶子视图重绘，队列不再被电平带着一起重画。
 final class LevelMeter: ObservableObject {
     @Published private(set) var level: Float = 0
+    /// 最近 48 次电平快照（环形缓冲，最新在尾）；只有波形视图订阅它
+    @Published private(set) var history: [Float] = Array(repeating: 0, count: 48)
+    private var buffer = [Float](repeating: 0, count: 48)
     private var lastPush = Date.distantPast
 
     /// 节流：最快 ~16Hz，且要有肉眼可见的变化才发布，避免无谓刷新
@@ -47,9 +50,12 @@ final class LevelMeter: ObservableObject {
         guard now.timeIntervalSince(lastPush) >= 0.06 || abs(v - level) > 0.06 else { return }
         lastPush = now
         level = v
+        buffer.removeFirst()
+        buffer.append(v)
+        history = buffer
     }
 
-    func reset() { level = 0 }
+    func reset() { level = 0; buffer = Array(repeating: 0, count: 48); history = buffer }
 }
 
 // MARK: - 环境检查项

@@ -45,17 +45,17 @@ final class MeterWaveView: NSView {
         self.meter = meter
         let colors = [accent.cgColor, live.cgColor]
         for g in bars { g.colors = colors }
-        cancellable = meter.$level
+        cancellable = meter.$history
             .receive(on: RunLoop.main)
-            .sink { [weak self] lv in self?.render(level: lv) }
+            .sink { [weak self] history in self?.render(history: history) }
     }
 
     override func layout() {
         super.layout()
-        render(level: meter?.level ?? 0)
+        render(history: meter?.history ?? Array(repeating: 0, count: barCount))
     }
 
-    private func render(level: Float) {
+    private func render(history: [Float]) {
         guard bounds.width > 1, bounds.height > 1 else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -67,10 +67,8 @@ final class MeterWaveView: NSView {
         var heights: [CGFloat] = []
         heights.reserveCapacity(bars.count)
         for i in 0..<bars.count {
-            let base: CGFloat = 6
-            let noise = CGFloat((i * 37) % 23) / 23 * 10
-            let live = CGFloat(level) * 26
-            heights.append(min(bounds.height, base + noise + live * (i % 3 == 0 ? 1 : 0.6)))
+            let v = i < history.count ? history[i] : 0
+            heights.append(bounds.height * CGFloat(0.08 + v * 0.92))
         }
         let hMax = heights.max() ?? 0
         let bottomInset = max(0, (bounds.height - hMax) / 2)
@@ -82,7 +80,7 @@ final class MeterWaveView: NSView {
                              width: bw,
                              height: h)
             g.cornerRadius = bw / 2
-            g.opacity = level > Float(i % 12) / 12 ? 1.0 : 0.28
+            g.opacity = 1
         }
         CATransaction.commit()
     }
