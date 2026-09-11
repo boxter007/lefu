@@ -134,6 +134,8 @@ final class SessionController: ObservableObject {
     private let artworkColor = ArtworkColorService()
     /// 上一次交给封面管线的 key：用于在切到无封面曲目时一次性清空旧氛围（避免逐拍闪断）
     private var accentKey: String?
+    /// 上一次封面字节的内容签名：字节未变时不重建 NSImage，避免逐拍交叉淡入
+    private var lastArtworkSignature: String?
     private var timeline: [TimelineEntry] = []
     private var sessionDir: URL?
     private var tickTimer: Timer?
@@ -463,6 +465,17 @@ final class SessionController: ObservableObject {
         }
     }
 
+    /// 封面字节的内容签名（长度 + FNV-1a 64 位）。不用 Swift 的 hashValue：
+    /// 每次进程启动都会随机化，无法稳定表达"同一张图"。
+    private static func artworkSignature(_ data: Data) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in data {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return "\(data.count)-\(String(hash, radix: 16))"
+    }
+
     // MARK: 封面入口：更新头部封面并异步派生强调色（灰阶/低饱和回落 nil）
     private func updateArtwork(_ info: TrackInfo) {
         guard let art = info.artwork, let img = NSImage(data: art) else {
@@ -470,14 +483,22 @@ final class SessionController: ObservableObject {
             if accentKey != info.key {
                 accentKey = info.key
                 artworkImage = nil
+                lastArtworkSignature = nil
                 coverAccent = nil
             }
             return
         }
         accentKey = info.key
-        artworkImage = img
+        let signature = Self.artworkSignature(art)
+        // 仅当封面字节真正变化时才替换 NSImage；同图逐拍回调复用旧对象，
+        // 否则 SwiftUI 每秒都认为封面变了而重复交叉淡入。
+        if signature != lastArtworkSignature {
+            lastArtworkSignature = signature
+            artworkImage = img
+        }
         let key = info.key
-        artworkColor.accent(forKey: key, image: img) { [weak self] color in
+        // 强调色按图像签名缓存：同 key 晚到的不同封面各自派生，正负缓存都不会互相压制。
+        artworkColor.accent(forImage: img, signature: signature) { [weak self] color in
             guard let self, self.currentTrack?.key == key else { return }
             self.coverAccent = color.map { Color(nsColor: $0) }
         }
@@ -503,8 +524,9 @@ final class SessionController: ObservableObject {
                 trackRows[i].artwork = NSImage(data: art)
             }
         }
-        // 封面晚到（已确认歌）：回填行缩略图后同步补头部封面/强调色
-        updateArtwork(info)
+        // 封面晚到（已确认歌）：这里只回填行缩略图；
+        // 头部封面/强调色由 onUpdate 的 updateArtwork(info) 统一负责，
+        // 用同一份 info 再调一次会重复入队（且刷新 lastArtworkSignature 时序）。
     }
 
     private static func existsInLibrary(name: String, dir: URL) -> Bool {
@@ -705,6 +727,9 @@ final class SessionController: ObservableObject {
         currentTrack = nil
         artworkImage = nil
         coverAccent = nil
+        // 清空封面签名/钥匙，避免下一场首曲与上一场尾曲字节相同时跳过重建封面
+        lastArtworkSignature = nil
+        accentKey = nil
         state = .idle
         runEnvCheck()
         refreshLibrary()

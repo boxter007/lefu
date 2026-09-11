@@ -2,20 +2,23 @@ import AppKit
 import CoreImage
 import LefuCore
 
-/// 从封面提取主色并钳制为强调色。异步 + 按 key 缓存，绝不占用主线程。
+/// 从封面提取主色并钳制为强调色。异步 + 按图像内容签名缓存，绝不占用主线程。
 final class ArtworkColorService {
     private let context = CIContext(options: [.workingColorSpace: NSNull()])
     private var cache: [String: NSColor] = [:]
     private var misses = Set<String>()
 
-    func accent(forKey key: String, image: NSImage, completion: @escaping (NSColor?) -> Void) {
-        if let cached = cache[key] { completion(cached); return }
-        if misses.contains(key) { completion(nil); return }
+    /// 以图像内容签名为键缓存（同签名 == 同图）。正负缓存都按签名，
+    /// 因此同一首歌晚到的新封面不会被先前 null/灰阶的负缓存永久压制。
+    /// 提取始终在后台队列，完成后回主线程写缓存并交付。
+    func accent(forImage image: NSImage, signature: String, completion: @escaping (NSColor?) -> Void) {
+        if let cached = cache[signature] { completion(cached); return }
+        if misses.contains(signature) { completion(nil); return }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
             let color = self.extract(image)
             DispatchQueue.main.async {
-                if let color { self.cache[key] = color } else { self.misses.insert(key) }
+                if let color { self.cache[signature] = color } else { self.misses.insert(signature) }
                 completion(color)
             }
         }

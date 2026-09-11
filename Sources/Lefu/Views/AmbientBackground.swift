@@ -59,8 +59,10 @@ final class AmbientView: NSView {
     private let scrim = CAGradientLayer()
     private var showingA = true
     private var scrimIsDark = true
-    /// 当前已请求的封面 key（陈旧守卫用）
+    /// 当前已请求的曲目 key（陈旧守卫用）
     var lastKey = ""
+    /// 当前已请求的模糊缓存键（trackKey#图像身份）：同曲目换图时丢弃旧图完成
+    var lastCacheKey = ""
     /// 当前已应用的封面对象：同一 key 上封面晚到时也要触发一次
     var lastImage: NSImage?
     /// 是否已成功渲染过一帧：首帧不淡入，之后切歌 0.6s 交叉淡入
@@ -156,14 +158,21 @@ struct AmbientBackground: NSViewRepresentable {
             v.hasRendered = true
             return
         }
-        if let cached = BlurredCover.cached(key) {
+        // 模糊缓存键必须含图像身份：同 key 晚到的新封面不能命中旧图的模糊结果。
+        // ObjectIdentifier 在主线程取，稳定标识本次会话内的图像对象（updateArtwork
+        // 已保证只有字节变化才会换新对象）。
+        let imageSignature = image.map { String(describing: ObjectIdentifier($0)) } ?? "nil"
+        let cacheKey = key + "#" + imageSignature
+        v.lastCacheKey = cacheKey
+        if let cached = BlurredCover.cached(cacheKey) {
             v.setCover(cached)
             v.hasRendered = true
             return
         }
         let cg = image?.cgImage(forProposedRect: nil, context: nil, hints: nil)
-        BlurredCover.render(cgImage: cg, key: key) { [weak v] out in
-            guard let v, v.lastKey == key else { return }   // 陈旧 key 丢弃
+        BlurredCover.render(cgImage: cg, key: cacheKey) { [weak v] out in
+            // 陈旧守卫：曲目 key 防止旧歌覆盖新歌；缓存键防止同曲目旧图覆盖新图
+            guard let v, v.lastKey == key, v.lastCacheKey == cacheKey else { return }
             v.setCover(out)
             v.hasRendered = true
         }
