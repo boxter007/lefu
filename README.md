@@ -16,7 +16,7 @@
 
 | 方式 | 命令 / 链接 |
 |---|---|
-| 下载安装包 | [Releases](https://github.com/boxter007/lefu/releases/latest) → 下载 `Lefu-v1.0.0.zip`（通用二进制，解压拖入 Applications） |
+| 下载安装包 | [Releases](https://github.com/boxter007/lefu/releases/latest) → 下载 `Lefu-v1.0.1.zip`（通用二进制，解压拖入 Applications） |
 | Homebrew | `brew install --cask boxter007/lefu/lefu` |
 | 自行构建 | 见下方[构建运行](#构建运行) |
 
