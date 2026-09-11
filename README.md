@@ -40,6 +40,7 @@
 | 输出格式 | MP3 320kbps（内嵌 ID3 封面标签）+ `.lrc` 同步歌词 |
 | 许可证 | [MIT](LICENSE)（开源免费） |
 | 变更日志 | [CHANGELOG.md](CHANGELOG.md) |
+| 路线图 | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | 依赖 | [BlackHole 2ch](https://existential.audio/blackhole/)（App 内一键安装）、LAME（已内置，无需 Homebrew） |
 
 > 乐府，汉代掌管音乐的官署，采民间歌谣配乐入府库。《汉书·食货志》：「行人振木铎徇于路以采诗。」这个 App 做的事一模一样：听歌，采诗，收卷入库。
