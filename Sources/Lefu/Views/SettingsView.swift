@@ -1,7 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import LefuCore
 
-// MARK: - 设置（四分区表单）
+// MARK: - 设置（多分区表单）
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var session: SessionController
@@ -26,6 +27,24 @@ struct SettingsView: View {
                                 Text(f.label).tag(f)
                             }
                         }.pickerStyle(.segmented).frame(width: 290)
+                    }
+                }
+
+                groupTitle("音源")
+                group {
+                    Text("只录制勾选的软件，避免误录视频/播客")
+                        .font(.system(size: 11))
+                        .foregroundColor(th.text2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 10)
+                        .padding(.bottom, 2)
+                    ForEach(SourceRegistry.shared.allProfiles) { p in
+                        row(p.displayName, icon: p.symbolName) {
+                            Toggle("", isOn: sourceBinding(p))
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
                     }
                 }
 
@@ -83,10 +102,18 @@ struct SettingsView: View {
             .padding(.bottom, 14)
     }
 
-    private func row(_ k: String, sub: String? = nil, @ViewBuilder trailing: () -> some View) -> some View {
+    private func row(_ k: String, sub: String? = nil, icon: String? = nil, @ViewBuilder trailing: () -> some View) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 1) {
-                Text(k).font(.system(size: 13)).foregroundColor(th.text)
+                HStack(spacing: 6) {
+                    if let icon {
+                        Image(systemName: icon)
+                            .font(.system(size: 12))
+                            .foregroundColor(th.text2)
+                            .frame(width: 16)
+                    }
+                    Text(k).font(.system(size: 13)).foregroundColor(th.text)
+                }
                 if let sub { Text(sub).font(.system(size: 11)).foregroundColor(th.text2) }
             }
             Spacer()
@@ -102,6 +129,18 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .labelsHidden()
         }
+    }
+
+    /// 音源勾选绑定：切换时按登记处顺序回写 enabledSourceIDs（不强制至少一项）
+    private func sourceBinding(_ p: SourceProfile) -> Binding<Bool> {
+        Binding(
+            get: { settings.enabledSourceIDs.contains(p.id.raw) },
+            set: { on in
+                var s = Set(settings.enabledSourceIDs)
+                if on { s.insert(p.id.raw) } else { s.remove(p.id.raw) }
+                settings.enabledSourceIDs = SourceRegistry.shared.allProfiles.map { $0.id.raw }.filter { s.contains($0) }
+            }
+        )
     }
 
     private func pickerRow(_ k: String, _ d: String, @ViewBuilder picker: () -> some View) -> some View {
