@@ -6,14 +6,16 @@ import LefuCore
 final class ArtworkColorService {
     private let context = CIContext(options: [.workingColorSpace: NSNull()])
     private var cache: [String: NSColor] = [:]
+    private var misses = Set<String>()
 
     func accent(forKey key: String, image: NSImage, completion: @escaping (NSColor?) -> Void) {
         if let cached = cache[key] { completion(cached); return }
+        if misses.contains(key) { completion(nil); return }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
             let color = self.extract(image)
             DispatchQueue.main.async {
-                if let color { self.cache[key] = color }
+                if let color { self.cache[key] = color } else { self.misses.insert(key) }
                 completion(color)
             }
         }

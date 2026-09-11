@@ -124,6 +124,8 @@ final class SessionController: ObservableObject {
     private var capture = AudioCapture()
     private var monitor = NowPlayingMonitor()
     private let artworkColor = ArtworkColorService()
+    /// 上一次交给封面管线的 key：用于在切到无封面曲目时一次性清空旧氛围（避免逐拍闪断）
+    private var accentKey: String?
     private var timeline: [TimelineEntry] = []
     private var sessionDir: URL?
     private var tickTimer: Timer?
@@ -453,7 +455,16 @@ final class SessionController: ObservableObject {
 
     // MARK: 封面入口：更新头部封面并异步派生强调色（灰阶/低饱和回落 nil）
     private func updateArtwork(_ info: TrackInfo) {
-        guard let art = info.artwork, let img = NSImage(data: art) else { return }
+        guard let art = info.artwork, let img = NSImage(data: art) else {
+            // 无封面：切到新 key 时回落默认氛围（同 key 重复回调不重复清，避免逐拍闪断）
+            if accentKey != info.key {
+                accentKey = info.key
+                artworkImage = nil
+                coverAccent = nil
+            }
+            return
+        }
+        accentKey = info.key
         artworkImage = img
         let key = info.key
         artworkColor.accent(forKey: key, image: img) { [weak self] color in
