@@ -10,6 +10,7 @@ struct TrackInfo: Equatable {
     var elapsed: Double
     var rate: Double?      // 播放速率：>0 在播，0 暂停；nil = 系统未上报该字段
     var artwork: Data?
+    var clientBundle: String? = nil   // 系统上报的客户端 App 标识（音源登记处据此解析/门禁）
 
     var key: String { title + "|" + artist }
 }
@@ -106,9 +107,6 @@ final class NowPlayingMonitor {
         return nil
     }
 
-    /// 只认汽水（与 soda_nowplaying.py 的 bundle 过滤一致）
-    private static let sodaBundle = "com.soda.music"
-
     // MARK: MediaRemote 私有框架
     private static let mrBundle: CFBundle? = {
         let path = "/System/Library/PrivateFrameworks/MediaRemote.framework"
@@ -149,11 +147,13 @@ final class NowPlayingMonitor {
             if let v = d["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double { return v }
             return (d["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? NSNumber)?.doubleValue
         }()
+        // 客户端 App 标识：上报给门禁层，由音源登记处解析
+        let clientBundle = d["kMRMediaRemoteNowPlayingInfoClientBundleIdentifier"] as? String
         // 封面：部分系统版本会随信息字典一起给出
         var artwork: Data?
         if let art = d["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data { artwork = art }
         if title.isEmpty { return nil }
-        return TrackInfo(title: title, artist: artist, album: album, duration: duration, elapsed: elapsed, rate: rate, artwork: artwork)
+        return TrackInfo(title: title, artist: artist, album: album, duration: duration, elapsed: elapsed, rate: rate, artwork: artwork, clientBundle: clientBundle)
     }
 
     // MARK: nowplaying-cli 兜底（get-raw 返回 kMRMediaRemoteNowPlayingInfo* 原始键）
@@ -171,11 +171,6 @@ final class NowPlayingMonitor {
             guard proc.terminationStatus == 0,
                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             else { return nil }
-            // bundle 过滤：只采汽水（Python 版同规则）
-            if let bundle = json["kMRMediaRemoteNowPlayingInfoClientBundleIdentifier"] as? String,
-               !bundle.isEmpty, bundle != sodaBundle {
-                return nil
-            }
             let title = json["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? ""
             if title.isEmpty { return nil }
             let artist = json["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
@@ -183,6 +178,8 @@ final class NowPlayingMonitor {
             let duration = (json["kMRMediaRemoteNowPlayingInfoDuration"] as? NSNumber)?.doubleValue ?? 0
             let elapsed = (json["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? NSNumber)?.doubleValue ?? 0
             let rate = (json["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? NSNumber)?.doubleValue
+            // 客户端 App 标识：不再在此层过滤音源，交给登记处/门禁
+            let clientBundle = json["kMRMediaRemoteNowPlayingInfoClientBundleIdentifier"] as? String
             // 封面：get-raw 给的是 base64 字符串
             var artwork: Data?
             if let b64 = json["kMRMediaRemoteNowPlayingInfoArtworkData"] as? String,
@@ -191,7 +188,7 @@ final class NowPlayingMonitor {
             } else if let raw = json["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data, raw.count > 100 {
                 artwork = raw
             }
-            return TrackInfo(title: title, artist: artist, album: album, duration: duration, elapsed: elapsed, rate: rate, artwork: artwork)
+            return TrackInfo(title: title, artist: artist, album: album, duration: duration, elapsed: elapsed, rate: rate, artwork: artwork, clientBundle: clientBundle)
         } catch {
             return nil
         }

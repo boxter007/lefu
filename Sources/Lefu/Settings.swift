@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import LefuCore
 
 // MARK: - 应用设置（四分区表单的数据源）
 final class AppSettings: ObservableObject {
@@ -11,6 +12,8 @@ final class AppSettings: ObservableObject {
     @Published var offlineMode: Bool { didSet { UserDefaults.standard.set(offlineMode, forKey: "offlineMode") } }
     @Published var lyricFallback: Bool { didSet { UserDefaults.standard.set(lyricFallback, forKey: "lyricFallback") } }
     @Published var backgroundMonitor: Bool { didSet { UserDefaults.standard.set(backgroundMonitor, forKey: "backgroundMonitor") } }
+    /// 已启用音源集合（登记处 profile.id.raw）；默认仅启用各档案 enabledByDefault 的音源 = ["soda"]
+    @Published var enabledSourceIDs: [String] { didSet { UserDefaults.standard.set(enabledSourceIDs, forKey: "enabledSourceIDs") } }
 
     enum OutputFormat: String, CaseIterable {
         case mp3 = "mp3_320"
@@ -43,6 +46,10 @@ final class AppSettings: ObservableObject {
         self.offlineMode = d.object(forKey: "offlineMode") as? Bool ?? false
         self.lyricFallback = d.object(forKey: "lyricFallback") as? Bool ?? true
         self.backgroundMonitor = d.object(forKey: "backgroundMonitor") as? Bool ?? false
+        // 默认只启用「默认开启」的音源（当前即汽水），行为与改造前一致
+        let savedSourceIDs = d.stringArray(forKey: "enabledSourceIDs")
+        self.enabledSourceIDs = savedSourceIDs
+            ?? SourceRegistry.shared.allProfiles.filter { $0.enabledByDefault }.map { $0.id.raw }
     }
 
     var resolvedOutputDir: URL {

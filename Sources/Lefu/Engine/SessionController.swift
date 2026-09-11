@@ -340,6 +340,8 @@ final class SessionController: ObservableObject {
         monitor.onUpdate = { [weak self] info in
             Task { @MainActor in
                 guard let self, let info, !info.title.isEmpty else { return }
+                // 门禁：系统正在播放的不是已启用音源 → 提前退出，不更新头部、不确认、不录
+                guard SourceRegistry.shared.isEnabled(info.clientBundle, enabled: self.settings.enabledSourceIDs) else { return }
                 self.currentTrack = info                       // 头部卡片实时（候选也预览）
                 self.updateArtwork(info)
 
@@ -900,6 +902,10 @@ final class SessionController: ObservableObject {
     }
 
     private func bgHandle(_ info: TrackInfo?) {
+        // 门禁：非启用音源对挂机层完全不可见（不自动开录，也不参与停播计时）
+        if let info, !SourceRegistry.shared.isEnabled(info.clientBundle, enabled: settings.enabledSourceIDs) {
+            return
+        }
         switch state {
         case .idle, .done:
             guard let info,
