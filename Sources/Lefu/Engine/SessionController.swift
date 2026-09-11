@@ -89,6 +89,7 @@ struct LibraryStats {
     var todayCount: Int = 0
     var todayBytes: Int64 = 0
     var totalBytes: Int64 = 0
+    var all: [OutputItem] = []
     var recent: [OutputItem] = []
 }
 
@@ -781,6 +782,7 @@ final class SessionController: ObservableObject {
                 todayCount: todayItems.count,
                 todayBytes: todayItems.reduce(0) { $0 + $1.size },
                 totalBytes: items.reduce(0) { $0 + $1.size },
+                all: items,
                 recent: Array(items.prefix(12))
             )
             // Sendable 域检查兼容（Swift 5.10+）：let 引用盒落成，再进 @Sendable Task
