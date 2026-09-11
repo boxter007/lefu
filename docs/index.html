@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>乐府 Lefu — 汽水音乐 / Apple Music / 网易云音乐 / 酷我音乐 / 酷狗音乐 Mac 内录自动裁曲工具</title>
-<meta name="description" content="乐府（Lefu）是一款开源免费的 macOS 应用：在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐或酷狗音乐，边按歌自动录制、裁曲、入库，每首歌自动保存为内嵌封面与标签的 MP3，并附带同步 LRC 歌词。纯 Swift / SwiftUI 原生开发，MIT 开源。">
-<meta property="og:title" content="乐府 Lefu — 汽水音乐 / Apple Music / 网易云音乐 / 酷我音乐 / 酷狗音乐 Mac 内录自动裁曲工具">
+<title>乐府 Lefu — 汽水音乐 / Apple Music / 网易云音乐 / 酷我音乐 / 酷狗音乐 / 喜马拉雅 Mac 内录自动裁曲工具</title>
+<meta name="description" content="乐府（Lefu）是一款开源免费的 macOS 应用：在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐或喜马拉雅，边按歌自动录制、裁曲、入库，每首歌自动保存为内嵌封面与标签的 MP3，并附带同步 LRC 歌词。纯 Swift / SwiftUI 原生开发，MIT 开源。">
+<meta property="og:title" content="乐府 Lefu — 汽水音乐 / Apple Music / 网易云音乐 / 酷我音乐 / 酷狗音乐 / 喜马拉雅 Mac 内录自动裁曲工具">
 <meta property="og:description" content="边听边录，切歌即出片。逐首录制架构，每首歌自动输出内嵌封面标签的 MP3 与同步歌词。">
 <meta property="og:image" content="social-preview.png">
 <meta property="og:type" content="website">
@@ -164,7 +164,7 @@
   <div class="wrap">
     <span class="eyebrow"><span class="dot"></span>MIT 开源 · 纯 Swift 原生 · 通用二进制</span>
     <h1>边听边录，<em>切歌即出片</em>。</h1>
-    <p class="lead">乐府是一款 macOS 应用：在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐或酷狗音乐，边按歌自动录制、裁曲、入库。每首歌直接产出内嵌封面与标签的 MP3，并附带同步歌词文件——不需要事后剪辑，也不会留下一整条剪不断的长录音。</p>
+    <p class="lead">乐府是一款 macOS 应用：在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐或喜马拉雅，边按歌自动录制、裁曲、入库。每首歌直接产出内嵌封面与标签的 MP3，并附带同步歌词文件——不需要事后剪辑，也不会留下一整条剪不断的长录音。</p>
     <div class="cta">
       <a class="btn btn-primary" href="https://github.com/boxter007/lefu/releases/latest">下载 Lefu v1.0.2</a>
       <a class="btn btn-ghost" href="https://github.com/boxter007/lefu">在 GitHub 上查看源码</a>
@@ -190,7 +190,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div>
         <h3>歌词四路抓取</h3>
-        <p>音源本地（汽水 / 酷狗 KRC、酷我 <code>.lrcx</code> 逐字）→ 自家缓存 → LRCLIB → 网易云，抓到即存缓存，之后离线也能配上词。</p>
+        <p>音源本地（汽水 / 酷狗 KRC、酷我 <code>.lrcx</code>、喜马拉雅字幕，均逐字）→ 自家缓存 → LRCLIB → 网易云，抓到即存缓存，之后离线也能配上词。</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
@@ -270,7 +270,7 @@
     <table class="spec">
       <tr><td>名称</td><td>乐府（Lefu）</td></tr>
       <tr><td>平台</td><td>macOS 13.0+（Apple Silicon 与 Intel 通用二进制）</td></tr>
-      <tr><td>内录对象</td><td>汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐（本地与在线歌曲）</td></tr>
+      <tr><td>内录对象</td><td>汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐、喜马拉雅（本地与在线歌曲）</td></tr>
       <tr><td>技术栈</td><td>Swift 5.9 · SwiftUI · CoreAudio · LAME</td></tr>
       <tr><td>输出格式</td><td>MP3 320kbps（内嵌 ID3 封面标签）+ <code>.lrc</code> 同步歌词</td></tr>
       <tr><td>默认府库</td><td><code>~/Music/乐府</code>，按日期归档</td></tr>
@@ -285,10 +285,10 @@
     <h2>常见问题</h2>
     <p class="sec-sub">更完整的 FAQ 在 <a href="https://github.com/boxter007/lefu#常见问题faq" style="color:var(--accent); text-decoration:none;">README</a> 里。</p>
 
-    <details><summary>乐府是什么？</summary><p>乐府是一款开源免费的 macOS 应用，用于在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐或酷狗音乐边按歌自动录制裁曲，每首歌自动保存为内嵌封面标签的 MP3 并附带同步歌词。</p></details>
+    <details><summary>乐府是什么？</summary><p>乐府是一款开源免费的 macOS 应用，用于在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐或喜马拉雅边按歌自动录制裁曲，每首歌自动保存为内嵌封面标签的 MP3 并附带同步歌词。</p></details>
     <details><summary>为什么需要 BlackHole？</summary><p>乐府靠虚拟声卡采集系统正在播放的音频。配合「乐府 通道」多输出设备，同一份声音同时进 BlackHole（录制）和扬声器（收听），边听边录互不干扰。</p></details>
     <details><summary>录出来的 MP3 音质如何？</summary><p>LAME 320kbps CBR，与源音频同为 44.1kHz 采样率，内嵌 ID3v2.3 封面与标签，旁挂 <code>.lrc</code> 同步歌词。</p></details>
-    <details><summary>支持哪些音乐软件？</summary><p>已支持 <b>汽水音乐</b>、<b>Apple Music</b>（macOS 自带「音乐」）、<b>网易云音乐</b>、<b>酷我音乐</b> 与 <b>酷狗音乐</b>（本地文件与在线歌曲均可；广播直播暂未适配）。汽水、酷狗与酷我支持零联网本地歌词（汽水 / 酷狗为 KRC 逐字，酷我为 <code>.lrcx</code> 逐字），酷我不上报封面时会自动从本地补齐。采用可扩展的音源架构，后续逐步接入更多播放器。</p></details>
+    <details><summary>支持哪些音乐软件？</summary><p>已支持 <b>汽水音乐</b>、<b>Apple Music</b>（macOS 自带「音乐」）、<b>网易云音乐</b>、<b>酷我音乐</b>、<b>酷狗音乐</b> 与 <b>喜马拉雅</b>（本地文件与在线歌曲/播客均可；广播直播暂未适配）。汽水、酷狗、酷我与喜马拉雅支持零联网本地歌词（汽水 / 酷狗为 KRC 逐字，酷我为 <code>.lrcx</code> 逐字，喜马拉雅为本地字幕文稿，需在 App 内开启「自动打开字幕/歌词」），酷我不上报封面时会自动从本地补齐。采用可扩展的音源架构，后续逐步接入更多播放器。</p></details>
     <details><summary>免费吗？会收费吗？</summary><p>免费且开源，MIT 许可证，源码全部公开。不存在收费版本。</p></details>
     <details><summary>首次打开提示"无法验证开发者"怎么办？</summary><p>目前是 ad-hoc 签名。右键 App 选「打开」，或执行 <code>xattr -cr /Applications/乐府.app</code>。这是当前版本的已知限制，后续会做正式签名与公证。</p></details>
   </div>

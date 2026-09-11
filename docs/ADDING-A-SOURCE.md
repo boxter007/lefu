@@ -88,6 +88,8 @@
 
 约定：document 负责屏幕逐字/整行显示；lrc 负责旁挂 .lrc。只实现 document 也能显示歌词，但不会写出本地 .lrc 旁挂（会退回在线链）。
 
+若该软件是 Electron/Chromium（歌词藏在本机 localStorage 的 LevelDB 里，如喜马拉雅），可复用 `Sources/Lefu/Engine/LevelDBReader.swift`：它只读解析 Snappy 压缩块、SSTable（`.ldb`）与 WAL（`.log`），取出明文 JSON 后再自行解析。注意这类缓存往往只保留「当前/最近曲目」，务必按曲名或曲目 id 校验后再返回，避免给错词。
+
 ### 3.4 可选：本地封面提供者：Sources/Lefu/Engine/YourNameLocalArtwork.swift
 
 仅当该软件**本地缓存了封面、却不上报到系统**时才需要写。实现 LocalArtworkProviding：
@@ -195,3 +197,5 @@ control 取值：
 - 本地歌词（加密 .krc，可逐字）：Sources/Lefu/Sources/KuGouSource.swift、Sources/Lefu/Engine/KuGouLocalLyricsBackend.swift
 - 本地歌词（加密 .lrcx）+ 本地封面兜底：Sources/Lefu/Sources/KuwoSource.swift、
   Sources/Lefu/Engine/KuwoLocalLyricsBackend.swift、Sources/Lefu/Engine/KuwoLocalArtwork.swift
+- 本地歌词（Electron localStorage / LevelDB + Snappy，喜马拉雅）：Sources/Lefu/Sources/XimalayaSource.swift、
+  Sources/Lefu/Engine/XimalayaLocalLyricsBackend.swift、Sources/Lefu/Engine/LevelDBReader.swift
