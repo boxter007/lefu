@@ -109,8 +109,9 @@ struct RootView: View {
     private var recChip: some View {
         HStack(spacing: 6) {
             if session.state == .live {
-                Circle().fill(th.live).frame(width: 7, height: 7)
-                    .modifier(BreathingModifier())
+                // 呼吸圆点走 CA 层动画：SwiftUI 的 repeatForever 会以 60Hz 逐帧 dirty 视图图
+                PulseDot(color: th.live)
+                    .frame(width: 7, height: 7)
                     .shadow(color: th.live.opacity(0.6), radius: 4)
                 Text(session.elapsedText)
                     .font(.lefu(.mono))
@@ -151,16 +152,6 @@ struct RootView: View {
         }
         .buttonStyle(.plain)
         .onHover { h in hoveredPage = h ? p : nil }
-    }
-}
-
-// MARK: 呼吸动画
-struct BreathingModifier: ViewModifier {
-    @State private var on = false
-    func body(content: Content) -> some View {
-        content.opacity(on ? 1 : 0.3)
-            .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: on)
-            .onAppear { on = true }
     }
 }
 

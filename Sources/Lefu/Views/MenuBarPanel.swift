@@ -34,10 +34,9 @@ struct MenuBarPanel: View {
 
     private var statusChip: some View {
         HStack(spacing: 5) {
-            Circle()
-                .fill(chipColor)
+            // 呼吸圆点走 CA 层动画（SwiftUI repeatForever 会逐帧 dirty 视图图）
+            PulseDot(color: chipColor)
                 .frame(width: 6, height: 6)
-                .modifier(BreathingModifier())
                 .shadow(color: chipColor.opacity(0.6), radius: 3)
             Text(chipText)
                 .font(.system(size: 10, weight: .medium))

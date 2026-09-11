@@ -44,7 +44,6 @@ struct RecordView: View {
     }
 
     // MARK: 待机
-    @State private var haloOn = false
     @State private var ringHover = false
     @State private var guideDismissed = false
     @State private var previousTrackRowCount = 0   // 曲目列表自动滚底：记录上一次行数（onAppear 会按当前行数对齐）
@@ -75,17 +74,11 @@ struct RecordView: View {
             session.startSession()
         } label: {
             ZStack {
-                // 呼吸光环
-                Circle()
-                    .fill(RadialGradient(colors: [th.accent.opacity(0.22), .clear], center: .center, startRadius: 30, endRadius: 100))
+                // 呼吸光环 + 外圈（CA 层动画，不再逐帧 dirty 视图图）
+                PulseHalo(color: th.accent)
                     .frame(width: 200, height: 200)
-                    .blur(radius: 10)
-                    .scaleEffect(haloOn ? 1.10 : 0.92)
-                    .opacity(haloOn ? 1 : 0.55)
-                Circle()
-                    .stroke(th.accent.opacity(0.35), lineWidth: 2)
+                PulseRing(color: th.accent.opacity(0.35))
                     .frame(width: 156, height: 156)
-                    .scaleEffect(haloOn ? 1.04 : 0.98)
                 Circle()
                     .fill(RadialGradient(colors: [th.panel2, th.panel], center: .topLeading, startRadius: 0, endRadius: 160))
                     .frame(width: 138, height: 138)
@@ -102,9 +95,6 @@ struct RecordView: View {
         }
         .buttonStyle(.plain)
         .onHover { ringHover = $0 }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { haloOn = true }
-        }
         .padding(.bottom, 16)
     }
 
@@ -1045,48 +1035,13 @@ struct RecordView: View {
     }
 }
 
-// MARK: - 电平波形（独立订阅 LevelMeter：电平高频刷新只重绘本视图）
-struct LevelWave: View {
-    @ObservedObject var meter: LevelMeter
-    let theme: LefuTheme
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 3) {
-            ForEach(0..<48, id: \.self) { i in
-                Capsule()
-                    .fill(
-                        LinearGradient(colors: [theme.accent, theme.live],
-                                       startPoint: .bottom, endPoint: .top)
-                            .opacity(barOpacity(for: i))
-                    )
-                    .frame(height: barHeight(for: i))
-            }
-        }
-        .frame(height: 44)
-    }
-
-    private func barOpacity(for i: Int) -> Double {
-        meter.level > Float(i % 12) / 12 ? 1.0 : 0.28
-    }
-
-    private func barHeight(for i: Int) -> CGFloat {
-        let base: CGFloat = 6
-        let noise = CGFloat((i * 37) % 23) / 23 * 10
-        let live = CGFloat(meter.level) * 26
-        return base + noise + live * (i % 3 == 0 ? 1 : 0.6)
-    }
-}
-
-// MARK: - 呼吸描边（采录中行的半透明薄框：透明度缓慢起伏，自持动画）
+// MARK: - 呼吸描边（采录中行的半透明薄框）
+// 动画交给 Core Animation 层（PulseBorder），不再用 SwiftUI repeatForever——
+// 后者每帧 dirty 视图图，会把上百行会话队列所在的整棵树按 60Hz 重算根布局
 struct BreathingStroke: View {
     let color: Color
-    @State private var on = false
     var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .stroke(color.opacity(on ? 0.75 : 0.12), lineWidth: 1)
-            .onAppear {
-                withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { on = true }
-            }
+        PulseBorder(color: color)
     }
 }
 
