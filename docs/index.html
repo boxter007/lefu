@@ -190,7 +190,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div>
         <h3>歌词四路抓取</h3>
-        <p>音源本地（如汽水 KRC）→ 自家缓存 → LRCLIB → 网易云，抓到即存缓存，之后离线也能配上词。</p>
+        <p>音源本地（汽水 KRC、酷我 <code>.lrcx</code> 逐字）→ 自家缓存 → LRCLIB → 网易云，抓到即存缓存，之后离线也能配上词。</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
@@ -200,7 +200,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 12l3 3 5-6"/></svg></div>
         <h3>成品即发布级</h3>
-        <p>LAME 320kbps 编码，ID3 封面与标签内嵌，同步歌词旁挂，归档完就是能直接收藏的样子。</p>
+        <p>LAME 320kbps 编码，ID3 封面与标签内嵌（系统不上报封面时自动从音源本地补齐，如酷我），同步歌词旁挂，归档完就是能直接收藏的样子。</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><path d="M3 11h18M7 7v12"/></svg></div>
@@ -288,7 +288,7 @@
     <details><summary>乐府是什么？</summary><p>乐府是一款开源免费的 macOS 应用，用于在 Mac 上边听汽水音乐、Apple Music、网易云音乐或酷我音乐边按歌自动录制裁曲，每首歌自动保存为内嵌封面标签的 MP3 并附带同步歌词。</p></details>
     <details><summary>为什么需要 BlackHole？</summary><p>乐府靠虚拟声卡采集系统正在播放的音频。配合「乐府 通道」多输出设备，同一份声音同时进 BlackHole（录制）和扬声器（收听），边听边录互不干扰。</p></details>
     <details><summary>录出来的 MP3 音质如何？</summary><p>LAME 320kbps CBR，与源音频同为 44.1kHz 采样率，内嵌 ID3v2.3 封面与标签，旁挂 <code>.lrc</code> 同步歌词。</p></details>
-    <details><summary>支持哪些音乐软件？</summary><p>已支持 <b>汽水音乐</b>、<b>Apple Music</b>（macOS 自带「音乐」）、<b>网易云音乐</b> 与 <b>酷我音乐</b>（本地文件与在线歌曲均可；广播直播暂未适配）。采用可扩展的音源架构，后续逐步接入更多播放器。</p></details>
+    <details><summary>支持哪些音乐软件？</summary><p>已支持 <b>汽水音乐</b>、<b>Apple Music</b>（macOS 自带「音乐」）、<b>网易云音乐</b> 与 <b>酷我音乐</b>（本地文件与在线歌曲均可；广播直播暂未适配）。汽水与酷我支持零联网本地歌词（酷我为 <code>.lrcx</code> 逐字），酷我不上报封面时会自动从本地补齐。采用可扩展的音源架构，后续逐步接入更多播放器。</p></details>
     <details><summary>免费吗？会收费吗？</summary><p>免费且开源，MIT 许可证，源码全部公开。不存在收费版本。</p></details>
     <details><summary>首次打开提示"无法验证开发者"怎么办？</summary><p>目前是 ad-hoc 签名。右键 App 选「打开」，或执行 <code>xattr -cr /Applications/乐府.app</code>。这是当前版本的已知限制，后续会做正式签名与公证。</p></details>
   </div>

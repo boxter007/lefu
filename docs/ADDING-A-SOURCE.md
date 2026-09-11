@@ -9,8 +9,9 @@
 
 ## 2. 心智模型
 
-- 一个音源 = 一份「档案」（纯数据）+ 可选的本地歌词后端 + 在登记处登记一行。
-- 元数据与「正在播放」全部来自系统（MediaRemote / nowplaying-cli）。乐府不解析任何软件的私有数据库来取元数据；歌名/歌手/专辑/时长/封面都以系统上报为准。
+- 一个音源 = 一份「档案」（纯数据）+ 可选的本地歌词后端 + 可选的本地封面提供者 + 在登记处登记一行。
+- 元数据与「正在播放」默认全部来自系统（MediaRemote / nowplaying-cli）；歌名/歌手/专辑/时长/封面都以系统上报为准，乐府不解析任何软件的私有数据库来取元数据。
+- 例外：若软件本地缓存了封面却不上报到系统，音源可声明一个「本地封面提供者」作为兜底（见 §3.4）。它只补封面，取不到就是无封面，不影响其它元数据。
 - 引擎里不含任何具体软件的分支。汽水相关的代码只存在于它自己的档案与本地歌词后端里。
 
 职责边界：
@@ -21,6 +22,7 @@
     SourceRegistry               内置音源清单与解析（bundle → 档案）
     SourceProfile（LefuCore）    纯数据档案，可单测
     LyricsBackend                本地歌词能力；每个音源自带，可为空
+    LocalArtworkProviding        本地封面兜底；每个音源自带，可为空
 
 ## 3. 接入三件事
 
@@ -54,7 +56,7 @@
             enabledByDefault: false)                 // 新音源一律 false
     }
 
-新音源不加 lyricsBackends 时不写本地歌词，自动走通用在线链，这是合法的。
+新音源不加 lyricsBackends 时不写本地歌词，自动走通用在线链；不加 artworkProvider 时不补本地封面。二者都是合法的。
 
 ### 3.3 可选：本地歌词后端：Sources/Lefu/Engine/YourNameLocalLyricsBackend.swift
 
@@ -86,15 +88,34 @@
 
 约定：document 负责屏幕逐字/整行显示；lrc 负责旁挂 .lrc。只实现 document 也能显示歌词，但不会写出本地 .lrc 旁挂（会退回在线链）。
 
-### 3.4 登记一行
+### 3.4 可选：本地封面提供者：Sources/Lefu/Engine/YourNameLocalArtwork.swift
+
+仅当该软件**本地缓存了封面、却不上报到系统**时才需要写。实现 LocalArtworkProviding：
+
+    import Foundation
+
+    final class YourNameLocalArtwork: LocalArtworkProviding {
+        // 按歌名/歌手/专辑在本地找封面图片字节（jpg/png）；取不到返回 nil
+        func artwork(title: String, artist: String, album: String) -> Data? {
+            return nil
+        }
+    }
+
+然后在档案里声明：
+
+    static let artworkProvider: LocalArtworkProviding? = YourNameLocalArtwork()
+
+引擎在系统未给封面时调用它兜底（见 SessionController.onUpdate）；系统已带封面则不调用。它只补封面，不影响其它元数据。
+
+### 3.5 登记一行
 
 编辑 Sources/Lefu/Sources/MusicSource.swift，把新档案加进清单：
 
     static let shared = SourceRegistry(sources: [SodaSource.self, YourNameSource.self])
 
-这是唯一需要登记新音源的地方。设置页、监听门禁、歌词后端都从这里取。
+这是唯一需要登记新音源的地方。设置页、监听门禁、歌词后端、封面兜底都从这里取。
 
-### 3.5 构建与打包
+### 3.6 构建与打包
 
     swift build --disable-sandbox
     ./scripts/build_app.sh        # 若 CLT 下 SPM 沙箱报错，见 README 的本地打包说明
@@ -157,7 +178,7 @@ control 取值：
 ## 8. 不要做的事
 
 - 不要在引擎（NowPlaying / Lyrics / SessionController / Cutter）里写具体 bundle 或软件分支。
-- 不要为补元数据去解析软件的私有数据库/私有接口；元数据一律用系统「正在播放」。
+- 不要为补**歌名/歌手/专辑**等元数据去解析软件的私有数据库/私有接口；这些一律用系统「正在播放」。唯一例外是封面：仅当系统不上报、而软件本地有封面时，才用 §3.4 的本地封面提供者兜底。
 - 不要把 enabledByDefault 设为 true，避免用户误录视频/播客。
 - 不要改动录制、切分、编码、命名策略。
 
@@ -165,6 +186,11 @@ control 取值：
 
     Sources/Lefu/Sources/YourNameSource.swift              # 档案（必填）
     Sources/Lefu/Engine/YourNameLocalLyricsBackend.swift   # 本地歌词（可选）
+    Sources/Lefu/Engine/YourNameLocalArtwork.swift         # 本地封面兜底（可选）
     Sources/Lefu/Sources/MusicSource.swift                 # 登记处加一行（必填）
 
-参考实现：Sources/Lefu/Sources/SodaSource.swift 与 Sources/Lefu/Engine/SodaLocalLyricsBackend.swift。
+参考实现：
+
+- 本地歌词：Sources/Lefu/Sources/SodaSource.swift 与 Sources/Lefu/Engine/SodaLocalLyricsBackend.swift
+- 本地歌词（加密 .lrcx）+ 本地封面兜底：Sources/Lefu/Sources/KuwoSource.swift、
+  Sources/Lefu/Engine/KuwoLocalLyricsBackend.swift、Sources/Lefu/Engine/KuwoLocalArtwork.swift
