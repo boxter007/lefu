@@ -27,6 +27,8 @@ final class Cutter {
     // 进度回调（主线程）
     var onTaskUpdate: ((CutTask) -> Void)?
     var onAllDone: (([CutTask]) -> Void)?
+    /// 本会话音源提供的本地歌词后端（由 SessionController 按当前音源装配；默认空 = 无本地歌词）
+    var localBackends: [LyricsBackend] = []
 
     private let wavURL: URL
     private let outDir: URL
@@ -186,12 +188,14 @@ final class Cutter {
             let entryTitle = task.entry.title
             let entryArtist = task.entry.artist
             let entryId = task.id
+            let backends = localBackends   // let 快照，供 @Sendable 闭包安全捕获
             final class RefBox { var value: String? = nil }
             let box = RefBox()
             Task {
                 box.value = await LyricsFetcher.fetchLRC(
                     title: entryTitle, artist: entryArtist,
-                    duration: effective, offline: offline, fallback: fb, cacheDir: cacheDir)
+                    duration: effective, offline: offline, fallback: fb, cacheDir: cacheDir,
+                    localBackends: backends)
                 Diag.log("CUT [\(entryId)] 歌词抓取返回 got=\(box.value != nil) \(Diag.since(tLrc))")
                 sema.signal()
             }

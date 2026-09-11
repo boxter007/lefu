@@ -5,18 +5,25 @@ import LefuCore
 enum LyricsFetcher {
     struct Line { let time: Double; let text: String }
 
-    /// 顺序：自家缓存 → LRCLIB → 网易云；抓到即回写缓存。
+    /// 顺序：本地后端 → 自家缓存 → LRCLIB → 网易云；抓到即回写缓存。
     /// 本地歌词（汽水 KRC/LRC）不再写死在这里，由调用方经 localBackends 注入。
-    static func fetchLRC(title: String, artist: String, duration: Double, offline: Bool, fallback: Bool, cacheDir: URL? = nil) async -> String? {
+    static func fetchLRC(title: String, artist: String, duration: Double, offline: Bool, fallback: Bool, cacheDir: URL? = nil,
+                         localBackends: [LyricsBackend] = []) async -> String? {
+        // 1. 本地后端（零联网）：命中即返回原始整行 LRC（不解析、不改写）
+        for backend in localBackends {
+            if let local = await backend.lrc(title: title, artist: artist, duration: duration), !local.isEmpty {
+                return local
+            }
+        }
         let key = cacheKey(title: title, artist: artist)
-        // 1. 自家缓存：离线模式的命脉
+        // 2. 自家缓存：离线模式的命脉
         if let dir = cacheDir, let cached = fromCache(dir, key) { return cached }
-        // 2. LRCLIB
+        // 3. LRCLIB
         if !offline, let lrc = await fromLrcLib(title: title, artist: artist, duration: duration) {
             saveToCache(lrc, dir: cacheDir, key: key)
             return lrc
         }
-        // 3. 网易云兜底
+        // 4. 网易云兜底
         if fallback && !offline, let lrc = await fromNetease(title: title, artist: artist) {
             saveToCache(lrc, dir: cacheDir, key: key)
             return lrc
@@ -36,7 +43,8 @@ enum LyricsFetcher {
             }
         }
         guard let lrc = await fetchLRC(title: title, artist: artist, duration: duration,
-                                       offline: offline, fallback: fallback, cacheDir: cacheDir) else { return nil }
+                                       offline: offline, fallback: fallback, cacheDir: cacheDir,
+                                       localBackends: localBackends) else { return nil }
         return LyricsDocument.parseLRC(lrc)
     }
 

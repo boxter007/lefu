@@ -7,4 +7,11 @@ import LefuCore
 protocol LyricsBackend {
     /// 按曲目信息取一份结构化歌词文档；取不到返回 nil
     func document(title: String, artist: String, duration: Double) async -> LyricsDocument?
+    /// 按曲目信息取原始整行 LRC 文本（旁挂 .lrc 用）；取不到返回 nil。
+    /// 可选实现：默认无本地 LRC 能力。
+    func lrc(title: String, artist: String, duration: Double) async -> String?
+}
+
+extension LyricsBackend {
+    func lrc(title: String, artist: String, duration: Double) async -> String? { nil }
 }

@@ -160,6 +160,8 @@ final class SessionController: ObservableObject {
     private var pendingStableCount = 0            // 候选连续稳定出现的拍数
     private var pendingFirstSeenAt: Date?         // 候选第一次见到的时刻（账面用）
     private var sessionGen = 0                    // 会话代际：跨场防串（上一场的收卷回调不得写进新场统计）
+    /// 本会话音源提供的本地歌词后端：确认曲目时按音源解析，收卷时装配给 Cutter 的旁挂 .lrc 链路
+    private var currentLyricBackends: [LyricsBackend] = []
 
     @MainActor init(settings: AppSettings) {
         self.settings = settings
@@ -316,6 +318,7 @@ final class SessionController: ObservableObject {
         coverAccent = nil
         lyrics = LyricsDocument(lines: [])
         lyricIndex = -1
+        currentLyricBackends = []
 
         // 无声自动停：阈值 60 秒（歌间串场/掌声/电台 DJ 静音都不会误触发；真停播由挂机监听的停播判定负责）
         capture.silenceLimit = settings.silenceAutoStop ? 60.0 : .infinity
@@ -457,9 +460,11 @@ final class SessionController: ObservableObject {
         let cacheDir = settings.resolvedOutputDir.appendingPathComponent(".lyrics")
         let offline = settings.offlineMode
         let fallback = settings.lyricFallback
-        // 音源档案 → 本地歌词后端；解析不到音源时为空数组（不影响原有缓存/在线链路）
+        // 音源档案 → 本地歌词后端；解析不到音源时为空数组（不影响原有缓存/在线链路）。
+        // 同时记为会话当前后端，收卷时装配给 Cutter，旁挂 .lrc 与采诗页歌词使用同一批后端。
         let localBackends = SourceRegistry.shared.profile(forBundle: info.clientBundle)
             .map { SourceRegistry.shared.backends(for: $0) } ?? []
+        currentLyricBackends = localBackends
         Task {
             let doc = await LyricsFetcher.fetchDocument(title: info.title, artist: info.artist,
                                                          duration: dur, offline: offline,
@@ -593,6 +598,7 @@ final class SessionController: ObservableObject {
         let bytesPerSecond = capture.pcmBytesPerSecond
         let out = settings.resolvedOutputDir.appendingPathComponent(dayString())
         let cutter = Cutter(wavURL: file, outDir: out, settings: settings)
+        cutter.localBackends = currentLyricBackends   // 旁挂 .lrc 走与采诗页同一批音源本地歌词后端
         activeCutters.append(cutter)   // 双保险：控制器持有在途流水线
         // 本首所在录音 WAV 记到行上（成品未落时点击行可先定位录音）
         for rid in rowIDs {
@@ -736,6 +742,7 @@ final class SessionController: ObservableObject {
         coverAccent = nil
         lyrics = LyricsDocument(lines: [])
         lyricIndex = -1
+        currentLyricBackends = []
         // 清空封面签名/钥匙，避免下一场首曲与上一场尾曲字节相同时跳过重建封面
         lastArtworkSignature = nil
         accentKey = nil

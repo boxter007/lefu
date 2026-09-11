@@ -17,4 +17,12 @@ final class SodaLocalLyricsBackend: LyricsBackend {
         }
         return nil
     }
+
+    /// 旁挂 .lrc 用：返回 localLyrics 的原始文本，逐字节等同改造前 fetchLRC 内联调用。
+    func lrc(title: String, artist: String, duration: Double) async -> String? {
+        if let local = SodaLyrics.localLyrics(title: title, artist: artist), !local.isEmpty {
+            return local
+        }
+        return nil
+    }
 }
