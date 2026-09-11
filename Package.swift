@@ -6,9 +6,19 @@ let package = Package(
     name: "乐府",
     platforms: [.macOS(.v13)],
     targets: [
+        .target(
+            name: "LefuCore",
+            path: "Sources/LefuCore"
+        ),
         .executableTarget(
             name: "乐府",
+            dependencies: ["LefuCore"],
             path: "Sources/Lefu"
+        ),
+        .testTarget(
+            name: "LefuCoreTests",
+            dependencies: ["LefuCore"],
+            path: "Tests/LefuCoreTests"
         )
     ],
     // 钉死 Swift 5 语言模式：代码按 v5 语义编写（GCD + MainActor 混用），
