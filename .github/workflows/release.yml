@@ -39,3 +39,21 @@ jobs:
         with:
           files: build/Lefu-*.zip
           generate_release_notes: true
+
+      # 把 Homebrew tap (boxter007/homebrew-lefu) 同步到本次发布的版本。
+      # 之前靠手工同步，结果 tap 落后了一个版本（cask 停在 1.0.0 而 release 已到 1.0.1），
+      # 故做成发布流程的一步。
+      #
+      # 需要配置仓库 Secret `TAP_TOKEN`：一个对 homebrew-lefu 有 contents:write 的
+      # fine-grained PAT。未配置则本步打印提示后跳过（此时可本地跑 scripts/bump_cask.sh）。
+      # 注意不要在 `if` 里读 secrets（上下文不可靠），统一在 run 里判空。
+      - name: Bump Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          if [ -z "${TAP_TOKEN:-}" ]; then
+            echo "未配置 TAP_TOKEN，跳过 tap 自动升级。"
+            echo "如需手动同步：bash scripts/bump_cask.sh ${GITHUB_REF_NAME} --zip build/Lefu-${GITHUB_REF_NAME}.zip"
+            exit 0
+          fi
+          bash scripts/bump_cask.sh "${GITHUB_REF_NAME}" --zip "build/Lefu-${GITHUB_REF_NAME}.zip"

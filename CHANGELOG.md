@@ -20,6 +20,7 @@
 ### 构建
 
 - **仓库卫生**（[#12](https://github.com/boxter007/lefu/issues/12)）：`design/` 下 6 个图标生成的临时中间产物（约 4MB）移出版本控制并加 `.gitignore` 规则
+- **Homebrew tap 自动化**：新增 [`scripts/bump_cask.sh`](scripts/bump_cask.sh)，按发布版本同步 `boxter007/homebrew-lefu` 的 cask 版本号与 sha256；发布流程加了 `Bump Homebrew cask` 一步，配置 `TAP_TOKEN` 后自动执行，不再靠手工同步（此前 cask 曾落后一个版本）
 
 ## [1.0.1] — 2026-09-11
 
