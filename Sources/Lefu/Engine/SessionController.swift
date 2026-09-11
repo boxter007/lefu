@@ -790,16 +790,19 @@ final class SessionController: ObservableObject {
             Task { @MainActor in
                 guard let s = box else { return }
                 s.library = stats
-                // 封面异步回填：只提最近 12 首，只读 ID3 头不碰音频数据
+                // 封面异步回填：全量扫描，只读 ID3 头不碰音频数据；单次后台遍历
                 DispatchQueue.global().async {
-                    for (idx, item) in stats.recent.enumerated() {
+                    for (idx, item) in stats.all.enumerated() {
                         guard item.id.pathExtension.lowercased() == "mp3" else { continue }
                         guard let img = CoverExtractor.extract(from: item.id) else { continue }
                         Task { @MainActor in
                             var rec = s.library
-                            guard idx < rec.recent.count,
-                                  rec.recent[idx].id == item.id else { return }
-                            rec.recent[idx].cover = img
+                            guard idx < rec.all.count,
+                                  rec.all[idx].id == item.id else { return }
+                            rec.all[idx].cover = img
+                            if idx < rec.recent.count, rec.recent[idx].id == item.id {
+                                rec.recent[idx].cover = img
+                            }
                             s.library = rec
                         }
                     }
