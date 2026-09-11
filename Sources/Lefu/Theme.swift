@@ -131,7 +131,8 @@ struct LefuCard: ViewModifier {
     var radius: CGFloat = 10
     func body(content: Content) -> some View {
         content
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(theme.panel))
+            // 卡片半透明，让封面氛围透出来；0.84 下正文/辅助对比度仍 >= 4.5/3:1（见 adjust-report）
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(theme.panel.opacity(0.84)))
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(theme.border, lineWidth: 0.5))
             .shadow(color: theme.shadow, radius: 4, x: 0, y: 2)
     }

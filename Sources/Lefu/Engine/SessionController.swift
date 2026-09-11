@@ -89,7 +89,6 @@ struct LibraryStats {
     var todayCount: Int = 0
     var todayBytes: Int64 = 0
     var totalBytes: Int64 = 0
-    var all: [OutputItem] = []
     var recent: [OutputItem] = []
 }
 
@@ -780,7 +779,7 @@ final class SessionController: ObservableObject {
         let dir = settings.resolvedOutputDir
         // 上一次的封面按 id 存档：本次重建时直接继承，刷新瞬间封面墙不再集体变白
         var previousCovers: [URL: NSImage] = [:]
-        for item in library.all {
+        for item in library.recent {
             if let cover = item.cover { previousCovers[item.id] = cover }
         }
         DispatchQueue.global().async { [weak self] in
@@ -820,7 +819,6 @@ final class SessionController: ObservableObject {
                 todayCount: todayItems.count,
                 todayBytes: todayItems.reduce(0) { $0 + $1.size },
                 totalBytes: items.reduce(0) { $0 + $1.size },
-                all: items,
                 recent: Array(items.prefix(12))
             )
             // Sendable 域检查兼容（Swift 5.10+）：let 引用盒落成，再进 @Sendable Task
@@ -832,7 +830,8 @@ final class SessionController: ObservableObject {
                 // 只给仍缺封面的 mp3 读 ID3 头（不碰音频数据），在后台线程提取后攒成一批。
                 // 旧实现每命中一首就从主线程整体拷贝 s.library 再赋值（O(N²)）且先清空封面；
                 // 这里提取期间让出主线程，最终只做一次批量合并赋值。
-                let pending = stats.all.filter { $0.cover == nil && $0.id.pathExtension.lowercased() == "mp3" }
+                // 曲库页已移除，只回填最近 12 条，不再对全库做封面提取。
+                let pending = stats.recent.filter { $0.cover == nil && $0.id.pathExtension.lowercased() == "mp3" }
                 guard !pending.isEmpty else { return }
                 let covers: [URL: NSImage] = await withCheckedContinuation { (cont: CheckedContinuation<[URL: NSImage], Never>) in
                     DispatchQueue.global(qos: .utility).async {
@@ -845,13 +844,10 @@ final class SessionController: ObservableObject {
                 }
                 guard !covers.isEmpty else { return }
                 var rec = s.library
-                var recentIdx: [URL: Int] = [:]
-                for (i, it) in rec.recent.enumerated() { recentIdx[it.id] = i }
                 var changed = false
-                for i in rec.all.indices where rec.all[i].cover == nil {
-                    guard let img = covers[rec.all[i].id] else { continue }
-                    rec.all[i].cover = img
-                    if let ri = recentIdx[rec.all[i].id] { rec.recent[ri].cover = img }
+                for i in rec.recent.indices where rec.recent[i].cover == nil {
+                    guard let img = covers[rec.recent[i].id] else { continue }
+                    rec.recent[i].cover = img
                     changed = true
                 }
                 if changed { s.library = rec }

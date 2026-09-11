@@ -16,7 +16,7 @@ enum BlurredCover {
     private static var order: [String] = []
     private static let cacheLimit = 16
     private static let maxDimension: CGFloat = 1024   // 超大封面先降采样，控制模糊成本
-    private static let sigma: CGFloat = 40
+    private static let sigma: CGFloat = 22
 
     static func cached(_ key: String) -> CGImage? {
         lock.lock(); defer { lock.unlock() }
@@ -35,7 +35,13 @@ enum BlurredCover {
             let longest = max(ci.extent.width, ci.extent.height)
             let scale = longest > maxDimension ? maxDimension / longest : 1
             let scaled = scale < 1 ? ci.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : ci
-            let blurred = scaled.applyingGaussianBlur(sigma: sigma).cropped(to: scaled.extent)
+            // 先提饱和/微提亮再模糊：封面色相更清晰地透出来，窗口氛围更明显
+            let boosted = scaled.applyingFilter("CIColorControls", parameters: [
+                kCIInputSaturationKey: 1.28,
+                kCIInputBrightnessKey: 0.02,
+                kCIInputContrastKey: 1.0,
+            ])
+            let blurred = boosted.applyingGaussianBlur(sigma: sigma).cropped(to: scaled.extent)
             let out = context.createCGImage(blurred, from: scaled.extent)
             if let out {
                 lock.lock()
@@ -95,12 +101,12 @@ final class AmbientView: NSView {
     /// 数值按最坏情况（纯白/纯黑封面）保正文 >= 4.5:1、辅助 >= 3:1，详见报告。
     private func applyScrimColors(isDark: Bool) {
         if isDark {
-            scrim.colors = [NSColor.black.withAlphaComponent(0.72).cgColor,
-                            NSColor.black.withAlphaComponent(0.88).cgColor]
+            scrim.colors = [NSColor.black.withAlphaComponent(0.70).cgColor,
+                            NSColor.black.withAlphaComponent(0.85).cgColor]
         } else {
-            // 浅色主题正文/辅助都是深色字，遮罩要更实；数值见 task-3-report 对比度表
-            scrim.colors = [NSColor.white.withAlphaComponent(0.80).cgColor,
-                            NSColor.white.withAlphaComponent(0.92).cgColor]
+            // 浅色主题正文/辅助都是深色字，遮罩要更实；数值见 adjust-report 对比度表
+            scrim.colors = [NSColor.white.withAlphaComponent(0.77).cgColor,
+                            NSColor.white.withAlphaComponent(0.90).cgColor]
         }
     }
 
