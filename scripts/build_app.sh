@@ -46,7 +46,23 @@ else
   echo "   警告：未找到 libmp3lame，运行时将回落 M4A"
 fi
 
-cat > "$APP/Contents/Info.plist" << 'PLIST'
+# —— 版本号管理（每次打包都必须更新版本号）——
+# VERSION 文件：第 1 行 = 营销版本号（CFBundleShortVersionString），第 2 行 = 构建号（CFBundleVersion）
+# 每跑一次本脚本，构建号自动 +1；要发新版就把 VERSION 第一行改掉，或打包时传 APP_VERSION=1.2.0 覆盖
+VERSION_FILE="$ROOT/VERSION"
+MARKETING=""
+BUILD_NO=""
+if [ -f "$VERSION_FILE" ]; then
+  MARKETING="$(sed -n '1p' "$VERSION_FILE" | tr -d '[:space:]')"
+  BUILD_NO="$(sed -n '2p' "$VERSION_FILE" | tr -d '[:space:]')"
+fi
+[ -n "$MARKETING" ] || MARKETING="1.0.0"
+case "$BUILD_NO" in ''|*[!0-9]*) BUILD_NO=0 ;; esac
+if [ -n "${APP_VERSION:-}" ]; then MARKETING="$APP_VERSION"; fi
+BUILD_NO=$((BUILD_NO + 1))
+printf '%s\n%s\n' "$MARKETING" "$BUILD_NO" > "$VERSION_FILE"
+
+cat > "$APP/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -64,8 +80,8 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
         <string>en</string>
     </array>
     <key>CFBundleAllowMixedLocalizations</key><true/>
-    <key>CFBundleShortVersionString</key><string>1.0.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>${MARKETING}</string>
+    <key>CFBundleVersion</key><string>${BUILD_NO}</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
@@ -74,13 +90,9 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
 </plist>
 PLIST
 
-# 版本注入：APP_VERSION 环境变量优先（tag 发布时由工作流传 v1.2.3 之类）
-if [ -n "${APP_VERSION:-}" ]; then
-  /usr/bin/sed -i '' "s|<string>1.0.0</string>|<string>${APP_VERSION}</string>|" "$APP/Contents/Info.plist"
-fi
-
 echo "== 3. ad-hoc 签名 =="
 codesign --force --deep -s - "$APP" 2>/dev/null || true
 
+echo "版本 → ${MARKETING} (build ${BUILD_NO})"
 echo "完成 → $APP"
 echo "运行: open \"$APP\""

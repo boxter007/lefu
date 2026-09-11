@@ -41,6 +41,12 @@ struct SettingsView: View {
                 groupTitle("引擎（高级）")
                 group {
                     envRow
+                    row("版本", sub: "乐府当前安装版本") {
+                        Text(AppInfo.versionText)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(th.text2)
+                            .textSelection(.enabled)
+                    }
                     row("诊断日志") {
                         Button("导出") { exportDiag() }
                             .buttonStyle(.link)
@@ -175,6 +181,7 @@ struct SettingsView: View {
             guard resp == .OK, let url = panel.url else { return }
             var lines: [String] = []
             lines.append("乐府 诊断日志 · \(f.string(from: Date()))")
+            lines.append("版本: \(AppInfo.versionText)")
             lines.append("")
             lines.append("— 环境 —")
             for c in session.envChecks {
