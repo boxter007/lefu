@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import AppKit
+import SwiftUI
 
 // MARK: - 采诗页五个中间态
 enum RecState: Equatable {
@@ -105,6 +106,8 @@ final class SessionController: ObservableObject {
     @Published var lyricIndex: Int = -1
     @Published var reworkFileURL: URL?
     @Published var artworkImage: NSImage?
+    /// 当前封面派生的强调色（异步提取、按 key 缓存；灰阶/低饱和为 nil）
+    @Published var coverAccent: Color?
     /// 电平表：独立对象，高频刷新只重绘波形，不惊动整个录制台（见 LevelMeter 注释）
     let meter = LevelMeter()
     @Published var library = LibraryStats()
@@ -120,6 +123,7 @@ final class SessionController: ObservableObject {
     private var activeCutters: [Cutter] = []
     private var capture = AudioCapture()
     private var monitor = NowPlayingMonitor()
+    private let artworkColor = ArtworkColorService()
     private var timeline: [TimelineEntry] = []
     private var sessionDir: URL?
     private var tickTimer: Timer?
@@ -297,6 +301,7 @@ final class SessionController: ObservableObject {
         doneStats = DoneStats()
         cutTasks = []
         elapsed = 0
+        coverAccent = nil
 
         // 无声自动停：阈值 60 秒（歌间串场/掌声/电台 DJ 静音都不会误触发；真停播由挂机监听的停播判定负责）
         capture.silenceLimit = settings.silenceAutoStop ? 60.0 : .infinity
@@ -322,7 +327,7 @@ final class SessionController: ObservableObject {
             Task { @MainActor in
                 guard let self, let info, !info.title.isEmpty else { return }
                 self.currentTrack = info                       // 头部卡片实时（候选也预览）
-                if let art = info.artwork, let img = NSImage(data: art) { self.artworkImage = img }
+                self.updateArtwork(info)
 
                 if info.title == self.currentStableTitle {
                     // 已确认的歌：歌手/专辑/时长/封面纠正 → 只更新，永不触发流程
@@ -446,6 +451,17 @@ final class SessionController: ObservableObject {
         }
     }
 
+    // MARK: 封面入口：更新头部封面并异步派生强调色（灰阶/低饱和回落 nil）
+    private func updateArtwork(_ info: TrackInfo) {
+        guard let art = info.artwork, let img = NSImage(data: art) else { return }
+        artworkImage = img
+        let key = info.key
+        artworkColor.accent(forKey: key, image: img) { [weak self] color in
+            guard let self, self.currentTrack?.key == key else { return }
+            self.coverAccent = color.map { Color(nsColor: $0) }
+        }
+    }
+
     // MARK: 更新器：已确认歌的元信息纠正（歌手/专辑/时长/封面晚到）→ 只原地更新，永不触发任何流程
     private func applyMetaCorrection(_ info: TrackInfo) {
         if !pendingEntries.isEmpty, pendingEntries[pendingEntries.count - 1].title == info.title {
@@ -466,6 +482,8 @@ final class SessionController: ObservableObject {
                 trackRows[i].artwork = NSImage(data: art)
             }
         }
+        // 封面晚到（已确认歌）：回填行缩略图后同步补头部封面/强调色
+        updateArtwork(info)
     }
 
     private static func existsInLibrary(name: String, dir: URL) -> Bool {
@@ -662,6 +680,7 @@ final class SessionController: ObservableObject {
         elapsed = 0
         currentTrack = nil
         artworkImage = nil
+        coverAccent = nil
         state = .idle
         runEnvCheck()
         refreshLibrary()
