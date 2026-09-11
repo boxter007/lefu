@@ -120,6 +120,8 @@ final class SessionController: ObservableObject {
     @Published var library = LibraryStats()
     @Published var installingBlackHole = false
     @Published var routeReady = false
+    /// 当前已确认音源的档案（判定节奏/在播信号/控制通道按它接线）；未解析或未启用时为 nil
+    @Published private(set) var currentSourceProfile: SourceProfile? = nil
     private var toastTimer: Timer?
 
     var settings = AppSettings()
@@ -319,6 +321,7 @@ final class SessionController: ObservableObject {
         lyrics = LyricsDocument(lines: [])
         lyricIndex = -1
         currentLyricBackends = []
+        currentSourceProfile = nil
 
         // 无声自动停：阈值 60 秒（歌间串场/掌声/电台 DJ 静音都不会误触发；真停播由挂机监听的停播判定负责）
         capture.silenceLimit = settings.silenceAutoStop ? 60.0 : .infinity
@@ -345,6 +348,7 @@ final class SessionController: ObservableObject {
                 guard let self, let info, !info.title.isEmpty else { return }
                 // 门禁：系统正在播放的不是已启用音源 → 提前退出，不更新头部、不确认、不录
                 guard SourceRegistry.shared.isEnabled(info.clientBundle, enabled: self.settings.enabledSourceIDs) else { return }
+                self.currentSourceProfile = SourceRegistry.shared.profile(forBundle: info.clientBundle)
                 self.currentTrack = info                       // 头部卡片实时（候选也预览）
                 self.updateArtwork(info)
 
@@ -356,7 +360,7 @@ final class SessionController: ObservableObject {
                 } else if info.title == self.pendingTitle {
                     // 候选再稳定一拍
                     self.pendingStableCount += 1
-                    if self.pendingStableCount >= 2 {
+                    if self.pendingStableCount >= (self.currentSourceProfile?.detection.confirmTicks ?? 2) {
                         self.confirmTrack(info)
                     }
                 } else {
@@ -367,7 +371,9 @@ final class SessionController: ObservableObject {
                 }
             }
         }
-        monitor.start()
+        // 轮询间隔按启用音源档案（默认单源汽水 = 1.0，与改造前一致）；未确认源时回落 1.0
+        let interval = SourceRegistry.shared.enabledProfiles(settings.enabledSourceIDs).first?.detection.pollInterval ?? 1.0
+        monitor.start(interval: interval)
 
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             let box = self
@@ -553,7 +559,8 @@ final class SessionController: ObservableObject {
     // MARK: 下一阕（真正让汽水切到下一首；换歌后监听会自动在时间轴上打新点）
     func nextTrack() {
         guard state == .live else { return }
-        let ok = NowPlayingControl.next()
+        let channel = currentSourceProfile?.control ?? .nowPlayingCLI
+        let ok = NowPlayingControl.next(channel: channel)
         if ok {
             showToast("已切下一阕")
         } else {
@@ -743,6 +750,7 @@ final class SessionController: ObservableObject {
         lyrics = LyricsDocument(lines: [])
         lyricIndex = -1
         currentLyricBackends = []
+        currentSourceProfile = nil
         // 清空封面签名/钥匙，避免下一场首曲与上一场尾曲字节相同时跳过重建封面
         lastArtworkSignature = nil
         accentKey = nil
@@ -917,6 +925,7 @@ final class SessionController: ObservableObject {
         if let info, !SourceRegistry.shared.isEnabled(info.clientBundle, enabled: settings.enabledSourceIDs) {
             return
         }
+        if let info { currentSourceProfile = SourceRegistry.shared.profile(forBundle: info.clientBundle) }
         switch state {
         case .idle, .done:
             guard let info,
@@ -948,10 +957,19 @@ final class SessionController: ObservableObject {
 
     /// 是否真的在播：优先 PlaybackRate（汽水的 elapsed 恒为 0，不可用）；字段缺失才退回进度判断
     private func bgIsPlaying(_ info: TrackInfo) -> Bool {
-        if let r = info.rate { return r > 0 }
-        let advancing = info.elapsed > bgLastElapsed + 0.05
-        bgLastElapsed = info.elapsed
-        return advancing
+        switch currentSourceProfile?.detection.playSignal ?? .ratePreferred {
+        case .ratePreferred:
+            // 汽水 elapsed 恒为 0，优先播放速率；速率字段缺失才退回进度判断
+            if let r = info.rate { return r > 0 }
+            let advancing = info.elapsed > bgLastElapsed + 0.05
+            bgLastElapsed = info.elapsed
+            return advancing
+        case .elapsedAdvance:
+            // 该音源不报播放速率，直接以进度推进判定
+            let advancing = info.elapsed > bgLastElapsed + 0.05
+            bgLastElapsed = info.elapsed
+            return advancing
+        }
     }
 
     // MARK: 时间格式

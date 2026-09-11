@@ -1,5 +1,6 @@
 import Foundation
 import CoreMedia
+import LefuCore
 
 // MARK: - 正在播放信息
 struct TrackInfo: Equatable {
@@ -17,25 +18,35 @@ struct TrackInfo: Equatable {
 
 // MARK: - 播放控制（让汽水真的切歌）
 enum NowPlayingControl {
-    /// 切到下一首：优先 nowplaying-cli（已实测能控制汽水），失败回落 MediaRemote 命令
+    /// 切到下一首：按音源档案声明的控制通道执行
+    /// - .none：该音源不支持控制，明确返回失败（不谎报成功）
+    /// - .nowPlayingCLI：优先 nowplaying-cli（已实测能控制汽水），失败回落 MediaRemote 命令
+    /// - .mediaRemote：跳过 CLI，直接走 MediaRemote 命令
     @discardableResult
-    static func next() -> Bool {
-        for path in ["/opt/homebrew/bin/nowplaying-cli", "/usr/local/bin/nowplaying-cli"] {
-            guard FileManager.default.isExecutableFile(atPath: path) else { continue }
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: path)
-            proc.arguments = ["next"]
-            proc.standardOutput = FileHandle.nullDevice
-            proc.standardError = FileHandle.nullDevice
-            do {
-                try proc.run()
-                proc.waitUntilExit()
-                if proc.terminationStatus == 0 { return true }
-            } catch {
-                continue
+    static func next(channel: ControlChannel) -> Bool {
+        switch channel {
+        case .none:
+            return false
+        case .mediaRemote:
+            return sendMediaRemoteCommand("kMRNextTrack")
+        case .nowPlayingCLI:
+            for path in ["/opt/homebrew/bin/nowplaying-cli", "/usr/local/bin/nowplaying-cli"] {
+                guard FileManager.default.isExecutableFile(atPath: path) else { continue }
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: path)
+                proc.arguments = ["next"]
+                proc.standardOutput = FileHandle.nullDevice
+                proc.standardError = FileHandle.nullDevice
+                do {
+                    try proc.run()
+                    proc.waitUntilExit()
+                    if proc.terminationStatus == 0 { return true }
+                } catch {
+                    continue
+                }
             }
+            return sendMediaRemoteCommand("kMRNextTrack")
         }
-        return sendMediaRemoteCommand("kMRNextTrack")
     }
 
     /// MediaRemote 私有框架发控制命令（CLI 缺失时的兜底）
