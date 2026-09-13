@@ -166,7 +166,7 @@
     <h1>边听边录，<em>切歌即出片</em>。</h1>
     <p class="lead">乐府是一款 macOS 应用：在 Mac 上边听汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐、喜马拉雅或 QQ音乐，边按歌自动录制、裁曲、入库。每首歌直接产出内嵌封面与标签的 MP3，并附带同步歌词文件——不需要事后剪辑，也不会留下一整条剪不断的长录音。</p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/boxter007/lefu/releases/latest">下载 Lefu v1.0.2</a>
+      <a class="btn btn-primary" href="https://github.com/boxter007/lefu/releases/latest">下载 Lefu v1.0.4</a>
       <a class="btn btn-ghost" href="https://github.com/boxter007/lefu">在 GitHub 上查看源码</a>
     </div>
     <p class="hint">或使用 Homebrew：<code>brew install --cask boxter007/lefu/lefu</code></p>
@@ -198,9 +198,14 @@
         <p>菜单栏常驻，开播自动采诗、停播自动收卷，全程无人值守，听着歌该干嘛干嘛。</p>
       </div>
       <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 6l7 6-7 6M13 6l7 6-7 6"/></svg></div>
+        <h3>已有歌自动下一首</h3>
+        <p>录到府库里已经有的歌时，自动让音乐软件切到下一首，不在重复曲目上耗时间。判定跨整个曲库，关掉即只标「跳过」继续往下录。</p>
+      </div>
+      <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 12l3 3 5-6"/></svg></div>
         <h3>成品即发布级</h3>
-        <p>LAME 320kbps 编码，ID3 封面与标签内嵌（系统不上报封面时自动从音源本地补齐，如酷我），同步歌词旁挂，归档完就是能直接收藏的样子。</p>
+        <p>LAME 320kbps 编码，内录音量自动归一化（不随系统音量忽大忽小），ID3 封面与标签内嵌（系统不上报封面时自动从音源本地补齐，如酷我），同步歌词旁挂，归档完就是能直接收藏的样子。</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><path d="M3 11h18M7 7v12"/></svg></div>
