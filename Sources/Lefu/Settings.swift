@@ -12,6 +12,8 @@ final class AppSettings: ObservableObject {
     @Published var offlineMode: Bool { didSet { UserDefaults.standard.set(offlineMode, forKey: "offlineMode") } }
     @Published var lyricFallback: Bool { didSet { UserDefaults.standard.set(lyricFallback, forKey: "lyricFallback") } }
     @Published var backgroundMonitor: Bool { didSet { UserDefaults.standard.set(backgroundMonitor, forKey: "backgroundMonitor") } }
+    /// 录到「库中已有」的歌时，自动让音源切到下一首（默认开）
+    @Published var autoSkipExisting: Bool { didSet { UserDefaults.standard.set(autoSkipExisting, forKey: "autoSkipExisting") } }
     /// 已启用音源集合（登记处 profile.id.raw）；默认仅启用各档案 enabledByDefault 的音源 = ["soda"]
     @Published var enabledSourceIDs: [String] { didSet { UserDefaults.standard.set(enabledSourceIDs, forKey: "enabledSourceIDs") } }
 
@@ -46,6 +48,7 @@ final class AppSettings: ObservableObject {
         self.offlineMode = d.object(forKey: "offlineMode") as? Bool ?? false
         self.lyricFallback = d.object(forKey: "lyricFallback") as? Bool ?? true
         self.backgroundMonitor = d.object(forKey: "backgroundMonitor") as? Bool ?? false
+        self.autoSkipExisting = d.object(forKey: "autoSkipExisting") as? Bool ?? true
         // 默认只启用「默认开启」的音源（当前即汽水），行为与改造前一致
         let savedSourceIDs = d.stringArray(forKey: "enabledSourceIDs")
         self.enabledSourceIDs = savedSourceIDs

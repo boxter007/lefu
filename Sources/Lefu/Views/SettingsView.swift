@@ -14,6 +14,7 @@ struct SettingsView: View {
                 groupTitle("录制")
                 group {
                     toggleRow("挂机监听", "检测到所选音源开播自动开录，停播自动收卷（关窗后菜单栏常驻）", $settings.backgroundMonitor)
+                    toggleRow("已有歌自动下一首", "录到库中已有的歌时，自动让音乐软件切下一首（关掉则只标跳过、继续往下录）", $settings.autoSkipExisting)
                     toggleRow("无声自动停", "连续静音 1 分钟自动结束录制（歌间串场不会误触发）", $settings.silenceAutoStop)
                     pickerRow("最短收录时长", "低于此时长的段落丢弃") {
                         Picker("", selection: Binding(get: { settings.minLength }, set: { settings.minLength = $0 })) {
@@ -262,6 +263,7 @@ struct SettingsView: View {
             lines.append("默认格式: \(settings.format.rawValue)")
             lines.append("无声自动停: \(settings.silenceAutoStop ? "开" : "关")")
             lines.append("挂机监听: \(settings.backgroundMonitor ? "开" : "关")")
+            lines.append("已有歌自动下一首: \(settings.autoSkipExisting ? "开" : "关")")
             lines.append("离线模式: \(settings.offlineMode ? "开" : "关")")
             lines.append("缺词联网兜底: \(settings.lyricFallback ? "开" : "关")")
             lines.append("最短收录: \(settings.minLength) 秒")

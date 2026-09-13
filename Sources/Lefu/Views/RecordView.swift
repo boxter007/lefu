@@ -152,8 +152,8 @@ struct RecordView: View {
                                                 .frame(width: 28, height: 28)
                                                 .clipShape(RoundedRectangle(cornerRadius: 7))
                                         } else {
-                                            Image(systemName: extIcon(item.id.pathExtension))
-                                                .font(.system(size: 10, weight: .semibold))
+                                            Text(extLabel(item.id.pathExtension))
+                                                .font(.system(size: 9, weight: .bold, design: .rounded))
                                                 .foregroundColor(th.accentText)
                                                 .frame(width: 28, height: 28)
                                                 .background(RoundedRectangle(cornerRadius: 7).fill(th.panel2))
@@ -238,12 +238,13 @@ struct RecordView: View {
         let m = Double(bytes) / 1024 / 1024
         return m >= 1 ? String(format: "%.1fM", m) : String(format: "%.0fK", Double(bytes) / 1024)
     }
-    private func extIcon(_ ext: String) -> String {
+    /// 无封面时的格式占位文字（曾经把这些字符串当 SF Symbol 名，触发 "No symbol named 'MP3'"）。
+    private func extLabel(_ ext: String) -> String {
         switch ext.lowercased() {
         case "mp3": return "MP3"
         case "m4a": return "M4A"
         case "flac": return "FLAC"
-        default: return "WAV"
+        default: return ext.isEmpty ? "WAV" : ext.uppercased()
         }
     }
     private func timeAgo(_ date: Date) -> String {

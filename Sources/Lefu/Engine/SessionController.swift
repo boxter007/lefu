@@ -31,6 +31,20 @@ struct TrackRow: Identifiable {
     var seconds: Double = 0       // 成品时长秒（收卷统计时回填，行内展示）
     var midJoin: Bool = false     // 半路接入（本场第一首歌，录制起点在歌中途，绝对进度不可知）
     var sourceName: String? = nil // 音源显示名（仅启用多音源时用于行内来源徽章）
+    var stageRank: Int = -1       // 已应用到该行的最高工序序号；迟到的低序号回调据此丢弃，防止覆盖终态
+}
+
+/// 裁曲工序的单调序号：Cutter 的工序回调与 onAllDone 各自经过 Task { @MainActor } hop，
+/// 两者之间顺序不保证；用序号只进不退，避免迟到的「切段中…」覆盖已写定的「跳过/完成」终态。
+private func cutStageRank(_ s: CutTask.Stage) -> Int {
+    switch s {
+    case .queue: return 0
+    case .slice: return 1
+    case .encode: return 2
+    case .tags: return 3
+    case .lyrics: return 4
+    case .done, .skipped, .failed: return 5
+    }
 }
 
 // MARK: - 电平表（高频 RMS，独立 ObservableObject）
@@ -45,18 +59,29 @@ final class LevelMeter: ObservableObject {
     private var buffer = [Float](repeating: 0, count: 48)
     private var lastPush = Date.distantPast
 
+    /// 自动增益参考：跟随最近电平的均值，映射中心稳定在 0.5。
+    /// app 监听的是 BlackHole（经「乐府 采诗通道」多输出），它的绝对电平由系统输出音量决定，
+    /// 用户音量随便调、能差几十 dB。固定映射不是趴平就是打顶；改成「相对参考电平的 dB 窗口」后，
+    /// 任何音量下波形都跟着声音饱满起伏。
+    private var ref: Float = 0.003
+    private let windowDB: Float = 12
+
     /// 节流：最快 ~16Hz，且要有肉眼可见的变化才发布，避免无谓刷新
     func push(_ v: Float) {
+        ref += (v - ref) * 0.08
+        // rel：相对参考的 dB（参考→0dB）。0.5 居中，±windowDB/2 触顶/触底
+        let rel = 20 * log10(max(v, 1e-7) / max(ref, 1e-6))
+        let norm = Float(max(0, min(1, 0.5 + rel / windowDB)))
         let now = Date()
-        guard now.timeIntervalSince(lastPush) >= 0.06 || abs(v - level) > 0.06 else { return }
+        guard now.timeIntervalSince(lastPush) >= 0.06 || abs(norm - level) > 0.06 else { return }
         lastPush = now
-        level = v
+        level = norm
         buffer.removeFirst()
-        buffer.append(v)
+        buffer.append(norm)
         history = buffer
     }
 
-    func reset() { level = 0; buffer = Array(repeating: 0, count: 48); history = buffer }
+    func reset() { level = 0; ref = 0.003; buffer = Array(repeating: 0, count: 48); history = buffer }
 }
 
 // MARK: - 环境检查项
@@ -427,7 +452,7 @@ final class SessionController: ObservableObject {
         }
 
         // ② 新行入列（库中已有 → 跳过徽章）
-        let exists = Self.existsInLibrary(name: info.title, dir: settings.resolvedOutputDir)
+        let exists = Self.existsInLibrary(title: info.title, artist: info.artist, dir: settings.resolvedOutputDir)
         rowID += 1
         // 本场第一首歌 = 半路接入：录制起点落在歌的中途（挂机半路拉起 / 用户中途点开始），
         // 汽水不暴露播放位置，绝对进度不可知——行内进度显示 --:--
@@ -436,6 +461,15 @@ final class SessionController: ObservableObject {
                                   artwork: info.artwork.flatMap { NSImage(data: $0) },
                                   midJoin: pendingEntries.isEmpty,
                                   sourceName: currentSourceProfile?.displayName))
+
+        // 库中已有 + 已开「自动下一首」→ 立刻让音源切歌，别把整首已拥有的歌录完再丢
+        if exists && settings.autoSkipExisting {
+            if advanceToNextTrack() {
+                showToast("「" + info.title + "」库中已有，自动切下一阕")
+            } else {
+                showToast("库中已有，但没找到" + (currentSourceProfile?.displayName ?? "当前音源") + "的控制通道")
+            }
+        }
 
         // ③ 换文件 + 收卷上一文件（首首歌沿用开录建好的 song-001，不换）
         let rotate = !pendingEntries.isEmpty
@@ -564,26 +598,26 @@ final class SessionController: ObservableObject {
         // 用同一份 info 再调一次会重复入队（且刷新 lastArtworkSignature 时序）。
     }
 
-    private static func existsInLibrary(name: String, dir: URL) -> Bool {
-        // 与 Cutter 的落盘目录一致（当日日期子目录），顶层扫描会漏判 → 行先入列"采录中"再被流水线跳过
-        let fm = FileManager.default
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
-        let out = dir.appendingPathComponent(f.string(from: Date()))
-        guard let files = try? fm.contentsOfDirectory(atPath: out.path) else { return false }
-        return files.contains { $0.contains(name) && !$0.hasSuffix(".lrc") }
+    private static func existsInLibrary(title: String, artist: String, dir: URL) -> Bool {
+        // 统一走 LibraryIndex：递归整个输出目录（含历次日期/裁曲/用户专辑），按 artist-title 精确匹配
+        LibraryIndex.contains(title: title, artist: artist, in: dir)
     }
 
     // MARK: 下一阕（真正让汽水切到下一首；换歌后监听会自动在时间轴上打新点）
     func nextTrack() {
         guard state == .live else { return }
-        let channel = currentSourceProfile?.control ?? .nowPlayingCLI
-        let ok = NowPlayingControl.next(channel: channel)
-        if ok {
+        if advanceToNextTrack() {
             showToast("已切下一阕")
         } else {
-            let name = currentSourceProfile?.displayName ?? "当前音源"
-            showToast("切歌失败：没找到\(name)的控制通道")
+            showToast("切歌失败：没找到" + (currentSourceProfile?.displayName ?? "当前音源") + "的控制通道")
         }
+    }
+
+    /// 让当前音源切下一首；返回是否成功（音源声明无控制通道 = false）
+    @discardableResult
+    private func advanceToNextTrack() -> Bool {
+        let channel = currentSourceProfile?.control ?? .nowPlayingCLI
+        return NowPlayingControl.next(channel: channel)
     }
 
     // MARK: 收卷（停录 + 当前文件交给后台流水线；无集中裁曲，逐首早已收卷）
@@ -630,8 +664,9 @@ final class SessionController: ObservableObject {
             if let r = trackRows.firstIndex(where: { $0.id == rid }) { trackRows[r].wavPath = file.path }
         }
         // 行内进度：每首歌的工序实时写回会话队列行，MP3 落盘即刷右栏
-        // 关键设计：行状态回填不做代际拦截——行号全局唯一，按行号写永远写不串行；
-        // 任何 guard 静默 return 都会让行永远停在「收卷中」（已踩坑），这里宁可多写也不吞回调。
+        // 行状态回填不做代际拦截——行号全局唯一，按行号写永远写不串行；
+        // 但工序回调与 onAllDone 的 MainActor hop 顺序不保证，必须按序号只进不退，
+        // 否则迟到的低序号工序会覆盖终态，把行永远卡在「切段中…」（已踩坑）。
         cutter.onTaskUpdate = { [weak self] task in
             Task { @MainActor in
                 guard let self else { Diag.log("SC onTaskUpdate 到达但 self 已释放 task=\(task.id)"); return }
@@ -644,6 +679,9 @@ final class SessionController: ObservableObject {
                     return
                 }
                 Diag.log("SC onTaskUpdate 落地 task=\(task.id) stage=\(task.stage) 行=\(rowIDs[task.id]) gen=\(gen)/\(self.sessionGen)")
+                let rank = cutStageRank(task.stage)
+                guard rank >= self.trackRows[r].stageRank else { return }   // 丢弃迟到的过期工序
+                self.trackRows[r].stageRank = rank
                 self.trackRows[r].stageLabel = task.stageLabel
                 switch task.stage {
                 case .done:
@@ -700,6 +738,7 @@ final class SessionController: ObservableObject {
                     // 行状态终态回填：无条件按行号写（行号全局唯一，跨场也写不串；
                     // 上一场的行多半已被清空，找不到就自然跳过）——这一步是「收卷中」卡死的最终兜底
                     if i < rowIDs.count, let r = self.trackRows.firstIndex(where: { $0.id == rowIDs[i] }) {
+                        self.trackRows[r].stageRank = 9   // 终态封顶：此后任何迟到工序回调都不得再改这行
                         switch task.stage {
                         case .done:
                             self.trackRows[r].status = .captured

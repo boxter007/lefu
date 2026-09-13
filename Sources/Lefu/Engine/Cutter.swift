@@ -102,7 +102,7 @@ final class Cutter {
         report(task)
         Diag.log("CUT [\(task.id)] 切段开始 start=\(String(format: "%.1f", start)) end=\(end.map { String(format: "%.1f", $0) } ?? "nil")")
         let tSlice = Date()
-        let pcm = try readSegment(start: start, end: end)
+        var pcm = try readSegment(start: start, end: end)
         Diag.log("CUT [\(task.id)] 切段完毕 samples=\(pcm.count) \(Diag.since(tSlice))")
 
         // 纯静音段：峰值 < 110（满幅 32767 约 -50dB）视为没在放歌
@@ -119,6 +119,10 @@ final class Cutter {
             return task
         }
 
+        // 增益归一化：BlackHole 电平随系统输出音量变化，可能整段偏轻；
+        // 提到目标响度并保证不削顶，成品音量才稳定。
+        pcm = Self.normalizeGain(pcm: pcm, peak: peak, taskID: task.id)
+
         // 编码（先出音频文件，歌词后补——歌词只进 .lrc 旁挂，不卡出片）
         task.stage = .encode
         task.stageLabel = "编码中…"
@@ -130,11 +134,11 @@ final class Cutter {
         }
         let outURL = outDir.appendingPathComponent(safeName + "." + settings.format.ext)
 
-        // 库中已有 → 跳过
-        if FileManager.default.fileExists(atPath: outURL.path) {
+        // 库中已有 → 跳过（递归整个输出目录，跨日期也算，忽略扩展名；与行徽章同源判定）
+        if LibraryIndex.contains(title: task.entry.title, artist: task.entry.artist, in: settings.resolvedOutputDir) {
             task.stage = .skipped
             task.stageLabel = "库中已有 · 跳过"
-            Diag.log("CUT [\(task.id)] 跳过 库中已有 \(outURL.lastPathComponent)")
+            Diag.log("CUT [" + String(task.id) + "] 跳过 库中已有 " + outURL.lastPathComponent)
             report(task)
             return task
         }
@@ -217,6 +221,30 @@ final class Cutter {
     }
 
     /// M4A：AVAudioFile 原生 AAC 编码（写文件后读回）
+    // MARK: 响度归一化
+    /// 目标整段 RMS ≈ -16dBFS（接近流媒体 -14 LUFS 的常见落点）
+    static let targetRMS: Double = 32767.0 * 0.158
+    /// 增益上限 +40dB，避免把接近静音段也拉爆
+    static let maxGainDB: Double = 40
+
+    /// 把整段提到目标 RMS，增益上限 +40dB，且保证不削顶（峰不超过 -0.3dBFS）。
+    static func normalizeGain(pcm: [Int16], peak: Int, taskID: Int) -> [Int16] {
+        guard !pcm.isEmpty, peak > 0 else { return pcm }
+        var sumSq = 0.0
+        for s in pcm { let d = Double(s); sumSq += d * d }
+        let rms = (sumSq / Double(pcm.count)).squareRoot()
+        guard rms > 1 else { return pcm }
+        var gain = targetRMS / rms
+        let capGain = pow(10, maxGainDB / 20)
+        if gain > capGain { gain = capGain }
+        let peakCap = 32767.0 * 0.97 / Double(peak)
+        if gain > peakCap { gain = peakCap }
+        guard gain > 1.02 else { return pcm }
+        let out = pcm.map { Int16(max(-32768, min(32767, Int(Double($0) * gain)))) }
+        Diag.log(String(format: "CUT [%d] 归一化 +%.1fdB peak=%d rms=%.1fdBFS", taskID, 20 * log10(gain), peak, 20 * log10(max(rms, 1) / 32767)))
+        return out
+    }
+
     func encodeM4A(samples: [Int16], sampleRate: Double, channels: Int, outURL: URL) throws -> Data {
         guard let fmt = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: AVAudioChannelCount(channels), interleaved: false) else {
             throw NSError(domain: "Cutter", code: 21, userInfo: [NSLocalizedDescriptionKey: "音频格式构造失败"])
@@ -301,11 +329,7 @@ final class Cutter {
     deinit { try? wavFile?.close() }
 
     // MARK: 工具
-    static func safeFileName(_ s: String) -> String {
-        let bad = CharacterSet(charactersIn: "/:\\?%*|\"<>")
-        return s.components(separatedBy: bad).joined(separator: " ").trimmingCharacters(in: .whitespaces).isEmpty
-            ? "未命名" : s.components(separatedBy: bad).joined(separator: " ")
-    }
+    static func safeFileName(_ s: String) -> String { LibraryIndex.safeFileName(s) }
 
     static func wavWrap(pcm: [Int16], sampleRate: Double, channels: Int) -> Data {
         var d = Data()

@@ -5,6 +5,7 @@ struct MenuBarPanel: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var session: SessionController
     @Environment(\.lefuTheme) var th
+    @Environment(\.openWindow) var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -180,7 +181,7 @@ struct MenuBarPanel: View {
     // MARK: 底部快捷行
     private var footer: some View {
         HStack(spacing: 6) {
-            footerButton("打开主窗", icon: "macwindow") { LefuApp.showMain() }
+            footerButton("打开主窗", icon: "macwindow") { LefuApp.revealMainWindow(using: openWindow) }
             footerButton("成品", icon: "folder") { session.openOutputFolder() }
             Spacer()
             footerButton("退出", icon: "power") { NSApp.terminate(nil) }
