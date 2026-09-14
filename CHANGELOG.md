@@ -3,6 +3,30 @@
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)；条目组织参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 构建号由打包脚本自动递增（见 [`VERSION`](VERSION) 与 [`scripts/build_app.sh`](scripts/build_app.sh)），应用内「设置 → 引擎（高级）→ 版本」可查看当前安装的版本。
 
+## [1.0.5] — 2026-09-15
+
+兼容性与安装体验：最低支持版本从 macOS 13 降到 **macOS 12**，修掉「低版本装不上」与「MP3 静默变 M4A」两个问题。
+
+### 修复
+
+- **Homebrew 安装被拦**：cask 里的 `depends_on macos: :ventura` 是**精确匹配 Ventura 这一个版本**（而非「Ventura 及以上」），导致 Sonoma / Sequoia 用户安装直接报
+  `Error: This software does not run on macOS versions other than Ventura.`
+  改为 `depends_on macos: ">= :monterey"`
+- **MP3 静默回落 M4A**（[#13](https://github.com/boxter007/lefu/issues/13)）：内置的 `libmp3lame.0.dylib` 此前直接拷贝构建机的 Homebrew 产物，会带上构建机的 SDK minos（实测 macOS 26 上是 `26.0`）。在低于该版本的机器上 `dlopen` 必然失败，而失败路径是**静默回落 M4A**——用户拿不到 MP3，界面还不报错。现在改为**从 LAME 官方源码、以 `-mmacosx-version-min` 自行编译**，让目标版本由我们决定而非构建机决定
+- **universal 包里的 dylib 只有 arm64**：修复后 Intel 机器上 MP3 编码恢复可用；打包时新增断言，`UNIVERSAL=1` 下 dylib 若不同时含 arm64 与 x86_64 即中止
+
+### 新增
+
+- **最低支持 macOS 12 (Monterey)**：`MenuBarExtra` / `Window(_:id:)` 是 macOS 13+ API，旧系统改用 AppKit 的 `NSStatusItem` + `NSPopover` 承载同一个菜单栏面板（`Views/MenuBarBridge.swift`）。面板本体是普通 SwiftUI View，界面代码零重复
+- **一键安装脚本** [`scripts/install_remote.sh`](scripts/install_remote.sh)：
+  `curl -fsSL https://raw.githubusercontent.com/boxter007/lefu/main/scripts/install_remote.sh | bash`
+  macOS 的隔离标记由「下载它的程序」打上，`curl` 不会打，故这样安装**无需右键、无需进系统设置、无需 `xattr`**。顺带避开了中文路径「乐府.app」在复制粘贴时变成乱码的坑
+- **打包期硬校验**：`build_app.sh` 现在会断言主程序与 `libmp3lame` 的 `minos` 不高于目标版本、以及 universal 构建的架构完整性，不达标即中止打包（把「静默降级」变成「构建期失败」）
+
+### 变更
+
+- 安装文档全面修订：「右键 → 打开」在 **macOS 15 (Sequoia) 已被 Apple 移除**，四处旧说法（README、官网、cask caveats、发布说明）统一改为正确的放行路径，并把命令行安装提到首位
+
 ## [1.0.4] — 2026-09-13
 
 录制体验收尾：把「府库已有」的判断统一并扩到整个曲库，新增自动切歌；同时给录音补上响度归一化，并修掉主窗恢复与电平表两个恼人的问题。
