@@ -15,12 +15,16 @@ open build/.dist/乐府.app
 
 开发时需要准备：
 
-- macOS 13.0+
+- macOS 12.0+（最低支持版本；实际开发在更新的系统上也可以，打包脚本会钉死 12.0）
 - Swift 5.9（Xcode 15+ 或 Swift.org 工具链）
 - [BlackHole 2ch](https://existential.audio/blackhole/)（调试内录必需）
 - 音频 MIDI 设置里建好「乐府 通道」多输出设备（名字一字不差，否则 App 认不出来）
 
-首次启动会被 Gatekeeper 拦截（ad-hoc 签名），右键 App 选「打开」即可，或 `xattr -cr build/.dist/乐府.app`。
+首次启动会被 Gatekeeper 拦截（ad-hoc 签名，没有公证）。放行方式按系统版本不同：
+
+- **macOS 15 (Sequoia) 及以上**：Apple 已移除「右键 → 打开」这条路径。到 系统设置 → 隐私与安全性 → 安全性，点「仍要打开」
+- **macOS 13 ~ 14**：右键 App 选「打开」，再点一次「打开」
+- **任何版本**：或直接 `xattr -cr build/.dist/乐府.app`（仅限自己构建的产物；用户安装请用 `scripts/install_remote.sh`）
 
 ## 提交改动
 

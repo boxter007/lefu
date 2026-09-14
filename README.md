@@ -6,7 +6,7 @@
 
 [![Release](https://img.shields.io/github/v/release/boxter007/lefu?color=e8555f&label=release)](https://github.com/boxter007/lefu/releases)
 [![License](https://img.shields.io/badge/license-MIT-3fb950)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-378add)](#环境要求)
+[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-378add)](#环境要求)
 [![Swift](https://img.shields.io/badge/Swift-5.9-fa7343)](Package.swift)
 [![Stars](https://img.shields.io/github/stars/boxter007/lefu?color=e8555f&label=stars)](https://github.com/boxter007/lefu/stargazers)
 
@@ -16,9 +16,16 @@
 
 | 方式 | 命令 / 链接 |
 |---|---|
+| **一键安装（推荐）** | `curl -fsSL https://raw.githubusercontent.com/boxter007/lefu/main/scripts/install_remote.sh \| bash` |
 | 下载安装包 | [Releases](https://github.com/boxter007/lefu/releases/latest) → 下载 `Lefu-v1.0.4.zip`（通用二进制，解压拖入 Applications） |
 | Homebrew | `brew install --cask boxter007/lefu/lefu` |
 | 自行构建 | 见下方[构建运行](#构建运行) |
+
+> **为什么推荐一键安装？** macOS 的「隔离标记」是**下载它的那个程序**打上的：浏览器下载的 App 会被 Gatekeeper 拦下，而 `curl` 不会。所以走命令行安装**不需要右键、不需要进系统设置、不需要 `xattr`**，装完直接能用。
+>
+> 若已用浏览器下载并看到「无法验证开发者」：
+> - **macOS 13 ~ 14**：在「应用程序」里右键点乐府 → 选「打开」→ 确认。
+> - **macOS 15 (Sequoia) 及以上**：Apple 已**移除**上述右键绕过方式，请改用「系统设置 → 隐私与安全性」→ 拉到最下方 → 点「仍要打开」。
 
 三步跑通：装 [BlackHole 2ch](https://existential.audio/blackhole/)（App 内一键装）→ 音频 MIDI 设置里建一次「乐府 通道」多输出设备（30 秒）→ 状态变绿，开始采诗。App 内「指南」页有全程引导。
 
@@ -34,7 +41,7 @@
 |---|---|
 | 名称 | 乐府（Lefu） |
 | 类型 | macOS 音乐内录 / 自动裁曲 / 音乐归档工具 |
-| 平台 | macOS 13.0+（Apple Silicon 与 Intel） |
+| 平台 | macOS 12.0+（Apple Silicon 与 Intel） |
 | 技术栈 | Swift 5.9 · SwiftUI · CoreAudio · LAME |
 | 内录对象 | 汽水音乐、Apple Music（macOS 自带「音乐」）、网易云音乐、酷我音乐、酷狗音乐、喜马拉雅、QQ音乐（含本地与在线歌曲） |
 | 输出格式 | MP3 320kbps（内嵌 ID3 封面标签）+ `.lrc` 同步歌词 |
@@ -54,7 +61,7 @@
 
 ## 环境要求
 
-- macOS 13.0+
+- macOS 12.0+
 - Swift 5.9（Xcode 15+ 或 Swift.org 工具链）
 - [BlackHole 2ch](https://existential.audio/blackhole/)（App 内可一键下载安装）
 - 汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐、喜马拉雅或 QQ音乐（内录对象）

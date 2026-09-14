@@ -274,7 +274,7 @@
     <p class="sec-sub">全部源码在本仓库，可自行构建或修改。</p>
     <table class="spec">
       <tr><td>名称</td><td>乐府（Lefu）</td></tr>
-      <tr><td>平台</td><td>macOS 13.0+（Apple Silicon 与 Intel 通用二进制）</td></tr>
+      <tr><td>平台</td><td>macOS 12.0+（Apple Silicon 与 Intel 通用二进制）</td></tr>
       <tr><td>内录对象</td><td>汽水音乐、Apple Music、网易云音乐、酷我音乐、酷狗音乐、喜马拉雅、QQ音乐（本地与在线歌曲）</td></tr>
       <tr><td>技术栈</td><td>Swift 5.9 · SwiftUI · CoreAudio · LAME</td></tr>
       <tr><td>输出格式</td><td>MP3 320kbps（内嵌 ID3 封面标签）+ <code>.lrc</code> 同步歌词</td></tr>
@@ -295,7 +295,7 @@
     <details><summary>录出来的 MP3 音质如何？</summary><p>LAME 320kbps CBR，与源音频同为 44.1kHz 采样率，内嵌 ID3v2.3 封面与标签，旁挂 <code>.lrc</code> 同步歌词。</p></details>
     <details><summary>支持哪些音乐软件？</summary><p>已支持 <b>汽水音乐</b>、<b>Apple Music</b>（macOS 自带「音乐」）、<b>网易云音乐</b>、<b>酷我音乐</b>、<b>酷狗音乐</b>、<b>喜马拉雅</b> 与 <b>QQ音乐</b>（本地文件与在线歌曲/播客均可；广播直播暂未适配）。汽水、酷狗、酷我与喜马拉雅支持零联网本地歌词（汽水 / 酷狗为 KRC 逐字，酷我为 <code>.lrcx</code> 逐字，喜马拉雅为本地字幕文稿，需在 App 内开启「自动打开字幕/歌词」），酷我不上报封面时会自动从本地补齐。采用可扩展的音源架构，后续逐步接入更多播放器。</p></details>
     <details><summary>免费吗？会收费吗？</summary><p>免费且开源，MIT 许可证，源码全部公开。不存在收费版本。</p></details>
-    <details><summary>首次打开提示"无法验证开发者"怎么办？</summary><p>目前是 ad-hoc 签名。右键 App 选「打开」，或执行 <code>xattr -cr /Applications/乐府.app</code>。这是当前版本的已知限制，后续会做正式签名与公证。</p></details>
+    <details><summary>首次打开提示"无法验证开发者"怎么办？</summary><p>目前是 ad-hoc 签名（未经 Apple 公证）。<b>最省事的办法是走命令行安装</b>：<code>curl -fsSL https://raw.githubusercontent.com/boxter007/lefu/main/scripts/install_remote.sh | bash</code> —— macOS 的隔离标记由「下载它的程序」打上，浏览器下载才会带，<code>curl</code> 不会，所以这样装的 App 可直接打开。</p><p>若已经用浏览器下载了：<b>macOS 13 ~ 14</b> 可在「应用程序」里右键点乐府 → 选「打开」→ 确认；<b>macOS 15 (Sequoia) 及以上，Apple 已移除右键绕过方式</b>，需到「系统设置 → 隐私与安全性」拉到最下方点「仍要打开」。这是当前版本的已知限制，后续会做正式签名与公证。</p></details>
   </div>
 </section>
 
