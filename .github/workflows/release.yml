@@ -19,13 +19,44 @@ jobs:
       - name: Select Xcode 15.4
         run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
-      - name: Install LAME
-        run: brew install lame
+      # 注意：这里刻意不再 `brew install lame`。
+      # Homebrew 的 libmp3lame 会带上构建机的 SDK minos（实测 macOS 26 上是 26.0），
+      # 打进包里后在低于该版本的机器上 dlopen 必然失败，而 LameEncoder 的失败路径是
+      # 「静默回落 M4A」——用户拿不到 MP3，界面还不报错，是最难排查的一类问题。
+      # build_app.sh 现在会从 LAME 官方源码、以 -mmacosx-version-min 自己编译，
+      # 并在打包末尾硬校验 dylib 与主程序的 minos，不达标直接失败。
+
+      - name: Verify deployment target consistency
+        run: |
+          # 三处声明必须一致：Package.swift / build_app.sh / 这里的期望值
+          PKG="$(grep -o '\.macOS(\.v[0-9]*)' Package.swift | grep -o '[0-9]*')"
+          BASH_TARGET="$(grep -o 'MACOSX_DEPLOYMENT_TARGET=[0-9.]*' scripts/build_app.sh | head -1 | cut -d= -f2)"
+          PLIST="$(grep -o '<key>LSMinimumSystemVersion</key><string>[0-9.]*</string>' scripts/build_app.sh | grep -o '[0-9.]*<' | tr -d '<')"
+          echo "Package.swift v$PKG / build_app.sh $BASH_TARGET / plist $PLIST"
+          [ "$PKG" = "12" ] && [ "$BASH_TARGET" = "12.0" ] && [ "$PLIST" = "12.0" ] \
+            || { echo "错误：最低版本声明不一致" >&2; exit 1; }
 
       - name: Build universal app
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          # 显式导出，确保 universal 两次单架构编译都继承同一目标版本
+          export MACOSX_DEPLOYMENT_TARGET=12.0
           UNIVERSAL=1 APP_VERSION="$VERSION" bash scripts/build_app.sh
+
+      # 把产物里的真实 minos 打印到日志并断言，避免「声明 12 实际更高」的静默漂移
+      - name: Verify built artifact minos
+        run: |
+          APP="build/.dist/乐府.app"
+          for f in "$APP/Contents/MacOS/乐府" "$APP/Contents/Frameworks/libmp3lame.0.dylib"; do
+            M="$(otool -l "$f" | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
+            echo "$(basename "$f"): minos=$M"
+            NEWER="$(printf '%s\n%s\n' "12.0" "$M" | sort -V | tail -1)"
+            if [ "$M" != "12.0" ] && [ "$NEWER" = "$M" ]; then
+              echo "错误：$(basename "$f") 的 minos=$M 高于 12.0" >&2
+              exit 1
+            fi
+          done
+          echo "两个二进制的 minos 均 <= 12.0 ✓"
 
       - name: Zip app
         run: |
