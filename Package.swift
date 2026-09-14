@@ -4,7 +4,17 @@ import PackageDescription
 
 let package = Package(
     name: "乐府",
-    platforms: [.macOS(.v13)],
+    // 最低支持 macOS 12（Monterey）。
+    //
+    // 13+ 独有的 Window(_:id:) / MenuBarExtra 一律不用：主窗用 WindowGroup、
+    // 菜单栏用 AppKit 的 MenuBarBridge（NSStatusItem + NSPopover），
+    // 于是全应用只有一条代码路径，不需要任何版本分叉。
+    // （分叉写法会让 Scene 的 opaque 返回类型不匹配并生成会崩的代码，
+    //   详见 Sources/Lefu/LefuApp.swift 顶部说明与 CHANGELOG 1.0.5。）
+    //
+    // 注意：这里只是 SwiftPM 的声明，真正决定 Mach-O minos 的是构建时的
+    // MACOSX_DEPLOYMENT_TARGET（见 scripts/build_app.sh），两者必须一致。
+    platforms: [.macOS(.v12)],
     targets: [
         .target(
             name: "LefuCore",
