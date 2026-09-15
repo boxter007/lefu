@@ -86,15 +86,29 @@ jobs:
       # 故做成发布流程的一步。
       #
       # 需要配置仓库 Secret `TAP_TOKEN`：一个对 homebrew-lefu 有 contents:write 的
-      # fine-grained PAT。未配置则本步打印提示后跳过（此时可本地跑 scripts/bump_cask.sh）。
-      # 注意不要在 `if` 里读 secrets（上下文不可靠），统一在 run 里判空。
+      # fine-grained PAT。
+      #
+      # ⚠️ 未配置 TAP_TOKEN 时本步**只是跳过**，若不显式告警就会被误认为成功——
+      #    实测 v1.0.5 发布时就踩过：CI 全绿，而 tap 仍停在 1.0.4，
+      #    于是走 Homebrew 的用户拿到的还是带缺陷的旧版本，且没人发现。
+      #    所以这里除了跳过，还要输出 GitHub 告警 + 写入 job summary。
+      #    注意不要在 `if` 里读 secrets（上下文不可靠），统一在 run 里判空。
       - name: Bump Homebrew cask
         env:
           TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
         run: |
           if [ -z "${TAP_TOKEN:-}" ]; then
-            echo "未配置 TAP_TOKEN，跳过 tap 自动升级。"
-            echo "如需手动同步：bash scripts/bump_cask.sh ${GITHUB_REF_NAME} --zip build/Lefu-${GITHUB_REF_NAME}.zip"
+            {
+              echo "### ⚠️ Homebrew tap 未同步"
+              echo ""
+              echo "未配置仓库 Secret \`TAP_TOKEN\`，cask **没有**升级到 ${GITHUB_REF_NAME}。"
+              echo "后果：\`brew install --cask boxter007/lefu/lefu\` 仍会装到旧版本。"
+              echo ""
+              echo "修复方式（任选其一）："
+              echo "1. 配置 \`TAP_TOKEN\`（对 homebrew-lefu 有 contents:write 的 PAT），重新跑本工作流；"
+              echo "2. 本地执行：\`bash scripts/bump_cask.sh ${GITHUB_REF_NAME}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Homebrew tap 未同步::未配置 TAP_TOKEN，tap 仍指向旧版本。用户走 brew 会装到旧版。"
             exit 0
           fi
           bash scripts/bump_cask.sh "${GITHUB_REF_NAME}" --zip "build/Lefu-${GITHUB_REF_NAME}.zip"
