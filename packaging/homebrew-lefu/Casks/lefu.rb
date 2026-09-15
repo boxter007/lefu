@@ -13,15 +13,42 @@ cask "lefu" do
     strategy :github_latest
   end
 
-  # ⚠️ 必须是范围为字符串 ">= :ventura" 的写法。
+  # ⚠️ 这里**必须**写成范围字符串，不能图省事改成单个符号 :monterey。
+  #    改动前请先读完这段，否则会把一个已经修好的线上问题改回去。
   #
-  # 原来是 `depends_on macos: :ventura`（单个符号），Homebrew 会把它理解为
-  # **精确匹配 Ventura 这一个版本**，而不是「Ventura 及以上」。后果是
-  # Sonoma / Sequoia 用户安装时直接报：
-  #     Error: This software does not run on macOS versions other than Ventura.
-  # 即「除了 Ventura 以外都不行」——这正是用户反馈的装不上问题的根因。
+  # 【问题】原来写的是 `depends_on macos: :ventura`（单个符号）。
+  #   在 Homebrew ≤ 5 里，单个符号的语义是**精确匹配**，源码为证
+  #   （brew 4.2.0, cask/dsl/depends_on.rb）：
+  #       elsif MacOSVersion::SYMBOLS.key?(args.first)
+  #         MacOSRequirement.new([args.first], comparator: "==")   # ← "==" 精确匹配
+  #   于是除 Ventura 外的**所有**系统（含更高的 Sonoma / Sequoia）安装时都报：
+  #       Error: This software does not run on macOS versions other than Ventura.
+  #   这就是用户反馈「装不上」的根因。
   #
-  # 乐府实际支持 macOS 12（Monterey）起，故这里写 >= :monterey。
+  # 【Homebrew 6 变了语义】brew 6 把单个符号改成了 ">="
+  #   （cask/dsl/depends_on.rb 固定传 comparator: ">="），于是 Homebrew 6 上
+  #   `:monterey` 恰好也等于「12 及以上」，且不再有弃用警告。
+  #
+  # 【为什么仍然坚持字符串写法】三种写法的实测对照（Homebrew 6.0.15 实测 +
+  #   4.2.0 源码核对）：
+  #
+  #     写法                    Homebrew ≤5        Homebrew 6+        安装期警告
+  #     ">= :monterey"          正确（12+）         正确（12+）        有 1 条弃用警告
+  #     :monterey               错误！精确匹配 12  正确（12+）        无
+  #     （不写）                 可装               可装               无
+  #
+  #   `:monterey` 在旧版 Homebrew 上会把「12 及以上」变成「只有 12」，
+  #   等于把刚修的这个 bug 原样改回去——所以不能选。
+  #   「不写」虽然最干净，但失去了 Homebrew 层的兜底，macOS 11 用户会先装成功、
+  #   再打不开，体验反而更差（虽然 Info.plist 的 LSMinimumSystemVersion=12.0
+  #   会让系统给出提示）。
+  #
+  #   字符串写法的代价只是**一条弃用警告**（不影响安装，brew audit 也通过）。
+  #   这是刻意用一点噪音换「任何 Homebrew 版本上都正确」，符合「最大化兼容」。
+  #
+  # 【将来何时可以改成 :monterey】当确认用户群已无 Homebrew ≤ 5
+  #   （即 Homebrew 6 普及）之后。届时改一行即可，警告也会消失。
+  #   在那之前请不要改。
   depends_on macos: ">= :monterey"
 
   app "乐府.app"
