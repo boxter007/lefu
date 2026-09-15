@@ -13,7 +13,7 @@ APP=/Applications/乐府.app
 SRC=build/.dist/乐府.app
 
 if [ ! -d "$SRC" ]; then
-  echo "找不到 $SRC，请先执行 ./scripts/build_app.sh" >&2
+  echo "找不到 ${SRC}，请先执行 ./scripts/build_app.sh" >&2
   exit 1
 fi
 

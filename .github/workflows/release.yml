@@ -29,9 +29,13 @@ jobs:
       - name: Verify deployment target consistency
         run: |
           # 三处声明必须一致：Package.swift / build_app.sh / 这里的期望值
-          PKG="$(grep -o '\.macOS(\.v[0-9]*)' Package.swift | grep -o '[0-9]*')"
+          PKG="$(grep -o '\.macOS(\.v[0-9]*)' Package.swift | grep -o '[0-9]*' | head -1)"
           BASH_TARGET="$(grep -o 'MACOSX_DEPLOYMENT_TARGET=[0-9.]*' scripts/build_app.sh | head -1 | cut -d= -f2)"
-          PLIST="$(grep -o '<key>LSMinimumSystemVersion</key><string>[0-9.]*</string>' scripts/build_app.sh | grep -o '[0-9.]*<' | tr -d '<')"
+          # 用 sed 取值：早先用 `grep -o '[0-9.]*<'` 是错的——`*` 允许零长度匹配，
+          # 会在每个 '<' 处都命中并吐出大量空行，取到的是 "\n\n12.0\n" 而非 "12.0"，
+          # 断言必然失败（等于 CI 永远发不出包）。数字部分必须用 `+`。
+          PLIST="$(sed -n 's|.*<key>LSMinimumSystemVersion</key><string>\([0-9.]*\)</string>.*|\1|p' \
+            scripts/build_app.sh | head -1)"
           echo "Package.swift v$PKG / build_app.sh $BASH_TARGET / plist $PLIST"
           [ "$PKG" = "12" ] && [ "$BASH_TARGET" = "12.0" ] && [ "$PLIST" = "12.0" ] \
             || { echo "错误：最低版本声明不一致" >&2; exit 1; }
@@ -43,20 +47,26 @@ jobs:
           export MACOSX_DEPLOYMENT_TARGET=12.0
           UNIVERSAL=1 APP_VERSION="$VERSION" bash scripts/build_app.sh
 
-      # 把产物里的真实 minos 打印到日志并断言，避免「声明 12 实际更高」的静默漂移
+      # 把产物里每个架构的真实 minos 打印到日志并断言，避免「声明 12 实际更高」的静默漂移。
+      # ⚠️ 必须逐架构：`otool -l` 不带 -arch 时只看 fat 二进制里第一个架构，
+      #    「arm64=12.0 但 x86_64=26.0」会被放过——issue #13 正是架构间不一致。
       - name: Verify built artifact minos
         run: |
           APP="build/.dist/乐府.app"
+          fail=0
           for f in "$APP/Contents/MacOS/乐府" "$APP/Contents/Frameworks/libmp3lame.0.dylib"; do
-            M="$(otool -l "$f" | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
-            echo "$(basename "$f"): minos=$M"
-            NEWER="$(printf '%s\n%s\n' "12.0" "$M" | sort -V | tail -1)"
-            if [ "$M" != "12.0" ] && [ "$NEWER" = "$M" ]; then
-              echo "错误：$(basename "$f") 的 minos=$M 高于 12.0" >&2
-              exit 1
-            fi
+            for a in $(lipo -archs "$f"); do
+              M="$(otool -l -arch "$a" "$f" | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
+              echo "$(basename "$f") [$a]: minos=$M"
+              NEWER="$(printf '%s\n%s\n' "12.0" "$M" | sort -V | tail -1)"
+              if [ "$M" != "12.0" ] && [ "$NEWER" = "$M" ]; then
+                echo "错误：$(basename "$f") 在 $a 上 minos=$M 高于 12.0" >&2
+                fail=1
+              fi
+            done
           done
-          echo "两个二进制的 minos 均 <= 12.0 ✓"
+          [ "$fail" = "0" ] || exit 1
+          echo "所有架构的 minos 均 <= 12.0 ✓"
 
       - name: Zip app
         run: |

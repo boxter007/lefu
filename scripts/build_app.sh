@@ -13,14 +13,45 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 APP="build/.dist/乐府.app"
 
-# —— 最低支持版本：macOS 11 (Big Sur) ——
+# —— 最低支持版本：macOS 12 (Monterey) ——
 # Package.swift 的 platforms 只是 SwiftPM 声明，真正写进 Mach-O 的是这里的
 # MACOSX_DEPLOYMENT_TARGET。两者必须一致，否则会出现「装得上但起不来」——
 # 例如 SDK 是 macOS 26 时默认 minos 可能被推到很高，旧系统直接 dyld 报错。
 # export 后 swift build / clang 都会继承，无需改 Package.swift 之外的地方。
 export MACOSX_DEPLOYMENT_TARGET=12.0
-# 让链接器只警告不报错地接受对更高版本符号的引用（11 以下没有的 API 由 #available 兜住）
+# 让链接器只警告不报错地接受对更高版本符号的引用（更低版本的 API 由 #available 兜住）
 export SWIFT_VERSION=5
+
+# —— 校验单个二进制的 minos 不高于目标版本 ——
+#
+# ⚠️ 必须**逐架构**检查。`otool -l` 不带 -arch 时只输出 fat 二进制里第一个架构的
+#    LC_BUILD_VERSION，于是「arm64 是 12.0、x86_64 是 26.0」这种情形会静默通过。
+#    而 issue #13 恰恰就是架构间不一致造成的（主程序 fat、dylib 却只有 arm64）。
+#
+# 判定用「排序后最大的那个是不是该架构的 minos」来表达 minos > target。
+# 早期写法 `sort -V | head -1 != target` 是**反的**：只在 minos 低于目标时报错，
+# 而 minos 高于目标（真正危险的情形，如 26.0 vs 12.0）反而静默放行。
+# 务必保持「取最大者」的写法。
+check_minos() {
+  local bin="$1" target="$2" label="$3"
+  [ -f "$bin" ] || { echo "   警告：$label 不存在，跳过 minos 校验"; return 0; }
+  local archs bad=0
+  archs="$(lipo -archs "$bin" 2>/dev/null)" || archs="$(uname -m)"
+  for a in $archs; do
+    local m newer
+    m="$(otool -l -arch "$a" "$bin" 2>/dev/null \
+      | awk '/LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX/{f=1} f&&/minos|version/{print $2; exit}')"
+    [ -n "$m" ] || { echo "   警告：读不到 $label 在 $a 上的 minos，跳过该架构"; continue; }
+    newer="$(printf '%s\n%s\n' "$target" "$m" | sort -V | tail -1)"
+    if [ "$m" != "$target" ] && [ "$newer" = "$m" ]; then
+      echo "   错误：$label 在 $a 上的 minos=$m 高于目标 $target" >&2
+      bad=1
+    else
+      echo "   $label [$a] minos=$m ✓（目标 ${target}）"
+    fi
+  done
+  return "$bad"
+}
 
 if [ "${UNIVERSAL:-0}" = "1" ]; then
   echo "== 1. swift release 编译（universal：arm64 + x86_64，两次单架构 + lipo 合并）=="
@@ -144,7 +175,7 @@ build_lame_from_source() {
 
 # 优先用已编译好的；没有就现场编；再不行才回落 Homebrew（并给出明确警告）
 if [ ! -f "$LAME_DYLIB" ]; then
-  echo "   源码编译 libmp3lame（mmacosx-version-min=$LAME_MIN）…"
+  echo "   源码编译 libmp3lame（-mmacosx-version-min=${LAME_MIN}）…"
   build_lame_from_source || true
 fi
 
@@ -174,7 +205,7 @@ if [ -f "$LAME_DYLIB" ]; then
       *arm64*x86_64*|*x86_64*arm64*)
         echo "   libmp3lame 架构=$LAME_ARCHS ✓（universal）" ;;
       *)
-        echo "   错误：libmp3lame 架构=$LAME_ARCHS，但这是 universal 构建" >&2
+        echo "   错误：libmp3lame 架构=${LAME_ARCHS}，但这是 universal 构建" >&2
         echo "   Intel 机器上将无法编码 MP3（会静默回落 M4A）。中止打包。" >&2
         exit 1 ;;
     esac
@@ -187,18 +218,11 @@ if [ -f "$LAME_DYLIB" ]; then
   # 早期写法 `sort -V | head -1 != LAME_MIN` 是**反的**：它只会在 minos 低于
   # 目标时报错，而 minos 高于目标（真正危险的情形，如 26.0 vs 12.0）反而静默通过。
   # 务必保持「取最大者」的写法。
-  LAME_MINOS="$(otool -l "$APP/Contents/Frameworks/libmp3lame.0.dylib" 2>/dev/null \
-    | awk '/LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX/{f=1} f&&/minos|version/{print $2; exit}')"
-  if [ -n "$LAME_MINOS" ]; then
-    NEWER="$(printf '%s\n%s\n' "$LAME_MIN" "$LAME_MINOS" | sort -V | tail -1)"
-    if [ "$LAME_MINOS" != "$LAME_MIN" ] && [ "$NEWER" = "$LAME_MINOS" ]; then
-      echo "   错误：libmp3lame 的 minos=$LAME_MINOS 高于目标 $LAME_MIN" >&2
-      echo "   这会导致旧系统上 dlopen 失败并静默回落 M4A。中止打包。" >&2
-      echo "   排查：确认 LAME 由源码编译（build/lame），而非拷贝 Homebrew 的 dylib。" >&2
-      exit 1
-    fi
-    echo "   libmp3lame minos=$LAME_MINOS ✓（目标 $LAME_MIN）"
-  fi
+  check_minos "$APP/Contents/Frameworks/libmp3lame.0.dylib" "$LAME_MIN" "libmp3lame" || {
+    echo "   这会导致旧系统上 dlopen 失败并静默回落 M4A。中止打包。" >&2
+    echo "   排查：确认 LAME 由源码编译（build/lame），而非拷贝 Homebrew 的 dylib。" >&2
+    exit 1
+  }
 else
   echo "   警告：未找到 libmp3lame，运行时将回落 M4A"
 fi
@@ -273,18 +297,12 @@ fi
 
 # —— 主程序 minos 校验：确保实际部署目标 == 声明的最低版本 ——
 # 防的是「Package.swift 写 .v12、SwiftPM 却按 SDK 默认值出包」这类静默不一致。
-# 判定与上面的 LAME 校验同理：minos 高于目标即失败。
-BIN_MINOS="$(otool -l "$APP/Contents/MacOS/乐府" 2>/dev/null \
-  | awk '/LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX/{f=1} f&&/minos|version/{print $2; exit}')"
-if [ -n "$BIN_MINOS" ]; then
-  BIN_NEWER="$(printf '%s\n%s\n' "$MACOSX_DEPLOYMENT_TARGET" "$BIN_MINOS" | sort -V | tail -1)"
-  if [ "$BIN_MINOS" != "$MACOSX_DEPLOYMENT_TARGET" ] && [ "$BIN_NEWER" = "$BIN_MINOS" ]; then
-    echo "   错误：主程序 minos=$BIN_MINOS 高于目标 $MACOSX_DEPLOYMENT_TARGET，中止打包" >&2
-    exit 1
-  fi
-  echo "   主程序 minos=$BIN_MINOS ✓（目标 $MACOSX_DEPLOYMENT_TARGET）"
+# 逐架构检查（见 check_minos 注释）：minos 高于目标即失败。
+if [ -f "$APP/Contents/MacOS/乐府" ]; then
+  check_minos "$APP/Contents/MacOS/乐府" "$MACOSX_DEPLOYMENT_TARGET" "主程序" \
+    || { echo "   中止打包。" >&2; exit 1; }
 else
-  echo "   警告：未能读到主程序 minos，跳过校验"
+  echo "   警告：未找到主程序，跳过 minos 校验"
 fi
 
 echo "版本 → ${MARKETING} (build ${BUILD_NO})"

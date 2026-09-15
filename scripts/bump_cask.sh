@@ -9,7 +9,7 @@
 # 为什么要做成脚本：tap 的版本号与 sha256 靠手工同步极易漏（本仓库就漏过一次：
 # cask 停在 1.0.0 而 release 已到 1.0.1）。脚本化后本地和 CI 都能一键对齐。
 #
-# 推送鉴权：优先用 $TAP_TOKEN（CI 里配的 PAT，走 https）；没有则回落到本机 SSH。
+# 推送鉴权：优先用 ${TAP_TOKEN}（CI 里配的 PAT，走 https）；没有则回落到本机 SSH。
 set -euo pipefail
 
 TAP_REPO="boxter007/homebrew-lefu"
@@ -98,7 +98,7 @@ open(path, "w", encoding="utf-8").write(new)
 print("已更新 cask")
 PY
 if [ "$PATCH_RC" = "3" ]; then
-  echo "== tap 已是 $VER，无需提交 =="
+  echo "== tap 已是 ${VER}，无需提交 =="
   exit 0
 elif [ "$PATCH_RC" != "0" ]; then
   echo "改写 cask 失败" >&2; exit 1
