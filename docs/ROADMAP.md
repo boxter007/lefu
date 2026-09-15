@@ -15,7 +15,8 @@
 | 版本 | 主题 | 状态 | 一句话 |
 |---|---|---|---|
 | v1.0.2 | [安装链路加固与健壮性](https://github.com/boxter007/lefu/milestone/2) | ✅ 已发布 | 修底层，不动界面 |
-| **v1.0.3** | [分发可用性修复](https://github.com/boxter007/lefu/milestone/3) | 🚧 进行中 | Intel 机器上 MP3 编码不可用 |
+| **v1.0.3** | [分发可用性修复](https://github.com/boxter007/lefu/milestone/3) | ✅ 已随 v1.0.5 完成 | Intel 机器上 MP3 编码不可用 |
+| **v1.0.5** | 兼容性与安装体验（未开 milestone） | ✅ 已发布 | 最低支持 macOS 12；修「装不上」与「静默变 M4A」 |
 | **v1.1** | [界面美化](https://github.com/boxter007/lefu/milestone/4) | 📋 规划中 | 把「封面即氛围」和卡拉OK 真正做出来（#14–#18） |
 | **v1.2** | [多音源](https://github.com/boxter007/lefu/milestone/5) | 📋 规划中 | 支持多个音乐播放软件，不再只认汽水（#19–#24） |
 | **v1.3** | [分发与可信赖](https://github.com/boxter007/lefu/milestone/6) | 📋 规划中 | 签名公证、应用内更新、英文 README（#1–#3、#25–#26） |
@@ -24,15 +25,17 @@
 
 ---
 
-## v1.0.3 — 分发可用性修复
+## v1.0.3 — 分发可用性修复 ✅（已随 v1.0.5 完成）
 
 已发布包是「通用二进制」，但内置的 `libmp3lame.0.dylib` 是从 Apple Silicon 的 Homebrew 直接拷来的 arm64 单架构，Intel 机器 `dlopen` 会报 `incompatible architecture`，MP3 编码静默回落到 M4A——用户以为存的是 MP3。
 
-| # | 事项 | 说明 |
+排查中还发现同一条链路上更隐蔽的问题：即使架构对了，Homebrew 的 dylib 还带着**构建机 SDK 的 minos**（实测 macOS 26 上编出来是 `26.0`），低于该版本的机器照样 `dlopen` 失败、照样静默回落。所以修复不止于补架构：
+
+| # | 事项 | 结果 |
 |---|---|---|
-| [#13](https://github.com/boxter007/lefu/issues/13) | 内置 LAME 补齐双架构 | 用 `lipo` 合并 arm64 + x86_64，或 CI 里两架构分别编译后合并；打包脚本加一道「dylib 架构必须匹配宿主包架构」的校验，防止再退化 |
-| — | CI 加架构自检 | 发布前断言 `lipo -archs` 与主程序一致，不一致直接 fail，不再靠人工发现 |
-| — | 引导文案兜底 | 万一编码器不可用，设置页「引擎（高级）」的自检应把 LAME 标红并给出手动安装指引，而不是静默回落 |
+| [#13](https://github.com/boxter007/lefu/issues/13) | 内置 LAME 补齐双架构 | ✅ v1.0.5：改为**从 LAME 官方源码按架构各编一次再 `lipo` 合并**，`minos` 由 `-mmacosx-version-min` 钉死为 12.0。不再拷构建机的 Homebrew 产物，从根上同时解决架构与 minos 两个问题 |
+| — | CI 加架构自检 | ✅ v1.0.5：`build_app.sh` **逐架构**断言 `minos`，并校验 universal 构建下 dylib 必须含 arm64 + x86_64，不达标即**中止打包**（把静默降级变成构建期失败） |
+| — | 引导文案兜底 | ⬜ **仍未做**：万一编码器不可用，设置页「引擎（高级）」的自检应把 LAME 标红并给出手动安装指引，而不是静默回落。本次只是让失败更难发生，兜底仍未落地 |
 
 ---
 

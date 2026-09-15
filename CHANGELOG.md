@@ -13,15 +13,18 @@
   `Error: This software does not run on macOS versions other than Ventura.`
   改为 `depends_on macos: ">= :monterey"`
 - **MP3 静默回落 M4A**（[#13](https://github.com/boxter007/lefu/issues/13)）：内置的 `libmp3lame.0.dylib` 此前直接拷贝构建机的 Homebrew 产物，会带上构建机的 SDK minos（实测 macOS 26 上是 `26.0`）。在低于该版本的机器上 `dlopen` 必然失败，而失败路径是**静默回落 M4A**——用户拿不到 MP3，界面还不报错。现在改为**从 LAME 官方源码、以 `-mmacosx-version-min` 自行编译**，让目标版本由我们决定而非构建机决定
-- **universal 包里的 dylib 只有 arm64**：修复后 Intel 机器上 MP3 编码恢复可用；打包时新增断言，`UNIVERSAL=1` 下 dylib 若不同时含 arm64 与 x86_64 即中止
+- **universal 包里的 dylib 只有 arm64**（[#13](https://github.com/boxter007/lefu/issues/13)）：主程序是 arm64 + x86_64 而内置 dylib 只有 arm64，Intel 机器上 `dlopen` 报 `incompatible architecture`，MP3 编码完全不可用。现在 `UNIVERSAL=1` 时按架构各编一次再 `lipo` 合并
 
 ### 新增
 
-- **最低支持 macOS 12 (Monterey)**：`MenuBarExtra` / `Window(_:id:)` 是 macOS 13+ API，旧系统改用 AppKit 的 `NSStatusItem` + `NSPopover` 承载同一个菜单栏面板（`Views/MenuBarBridge.swift`）。面板本体是普通 SwiftUI View，界面代码零重复
+- **最低支持 macOS 12 (Monterey)**（原为 macOS 13）。实现上刻意**不做版本分叉**：主窗一律 `WindowGroup`、菜单栏一律 AppKit 的 `NSStatusItem` + `NSPopover`（`Views/MenuBarBridge.swift`），于是全应用只有一条代码路径
+  - 为什么不按版本分叉：`SceneBuilder` 没有 `buildEither`，Scene 内部不能写 `if`；改用普通函数 + `some Scene` 也不行——opaque 返回类型要求所有 return 的底层类型一致，而 `Window` 与 `WindowGroup` 是不同类型。编译器不报错却生成会崩的代码，实测启动即段错误（`EXC_BAD_ACCESS` / `swift_retain` ← `initializeWithCopy for LefuSceneContent`）。收敛成单一路径后该问题从根上消失，也让 macOS 12 的行为第一次真正可测
+  - 面板本体 `MenuBarPanel` 是普通 SwiftUI View，界面代码零重复；主题派生抽成 `Views/LefuThemeFactory.swift` 供主窗与面板共用，避免面板丢失封面强调色
+  - 主窗关闭由 `Views/MainWindowKeeper.swift` 转为「隐藏」，因此无需 macOS 13+ 的 `openWindow` 也能重新打开
 - **一键安装脚本** [`scripts/install_remote.sh`](scripts/install_remote.sh)：
   `curl -fsSL https://raw.githubusercontent.com/boxter007/lefu/main/scripts/install_remote.sh | bash`
   macOS 的隔离标记由「下载它的程序」打上，`curl` 不会打，故这样安装**无需右键、无需进系统设置、无需 `xattr`**。顺带避开了中文路径「乐府.app」在复制粘贴时变成乱码的坑
-- **打包期硬校验**：`build_app.sh` 现在会断言主程序与 `libmp3lame` 的 `minos` 不高于目标版本、以及 universal 构建的架构完整性，不达标即中止打包（把「静默降级」变成「构建期失败」）
+- **打包期硬校验**：`build_app.sh` 现在**逐个架构**断言主程序与 `libmp3lame` 的 `minos` 不高于目标版本，并校验 universal 构建的架构完整性，不达标即中止（把「静默降级」变成「构建期失败」）。CI 同步修掉两处缺陷：一致性检查因 `grep -o '[0-9.]*<'` 的零长度匹配而必然失败，以及 `otool -l` 不带 `-arch` 时只检查 fat 包中第一个架构
 
 ### 变更
 
