@@ -1,3 +1,10 @@
+# 这是 boxter007/homebrew-lefu 仓库 Casks/lefu.rb 的**参考副本**，不是运行时依赖——
+# 本仓库没有任何脚本读它（bump_cask.sh 是直接 clone tap 来改的）。
+# 保留它的目的：把下面 depends_on 的踩坑记录留在主仓库里，tap 万一重建也不至于丢失。
+#
+# ⚠️ 其中 version / sha256 两行**以 tap 仓库为准**，由发布流程自动写入
+#    （CI 的 bump_cask.sh，或本地 `bash scripts/bump_cask.sh <tag>`）。
+#    本副本的这两个值可能滞后，改动时不要参考它们，也不要拿它去覆盖 tap。
 cask "lefu" do
   version "1.0.4"
   sha256 "7778851b15d214ddef34fee43e52f7d746d57cd2dd5797443cb68886c25084e4"

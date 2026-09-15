@@ -107,18 +107,48 @@ fi
 # 4) 提交并推送（本机偶发 git 锁竞态，清锁重试）
 git -c user.name="lefu release bot" -c user.email="9445146+boxter007@users.noreply.github.com" \
     add "$CASK_PATH"
-for i in 1 2 3 4 5 6 7 8 9 10; do
+
+# ⚠️ 提交必须显式判定成败。
+#    早期写法是 `git commit ... && break`，重试 10 次后若仍失败会**静默落下**：
+#    紧接着的 `git push` 在「没有新提交」时会正常返回 0（无内容可推），
+#    于是脚本打印「已升级到 X」、CI 记为 success，而 tap 一个字都没变。
+#    这类「假成功」正是 tap 落后一个版本却无人察觉的原因。
+committed=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
   rm -f .git/index.lock 2>/dev/null || true
-  git -c user.name="lefu release bot" -c user.email="9445146+boxter007@users.noreply.github.com" \
-      commit -q -m "cask: lefu $VER" && break
+  if git -c user.name="lefu release bot" \
+         -c user.email="9445146+boxter007@users.noreply.github.com" \
+         commit -q -m "cask: lefu ${VER}"; then
+    committed=1; break
+  fi
   sleep 0.3
 done
+if [ "$committed" != "1" ]; then
+  echo "提交失败：重试 10 次仍无法提交 cask 改动" >&2
+  exit 1
+fi
 
-for i in 1 2 3 4 5; do
-  if git push -q origin HEAD:main 2>/dev/null; then break; fi
-  [ "$i" = "5" ] && { echo "推送失败" >&2; exit 1; }
+pushed=0
+for _ in 1 2 3 4 5; do
+  if git push -q origin HEAD:main 2>/dev/null; then pushed=1; break; fi
   sleep 0.5
 done
+if [ "$pushed" != "1" ]; then
+  echo "推送失败：无法写入 $TAP_REPO" >&2
+  exit 1
+fi
 
-echo "== 完成：$TAP_REPO 已升级到 $VER =="
+# 5) 回读远端确认真的落库
+#    不信任 push 的退出码——上面的静默 no-op 就是这么骗过 CI 的。
+git fetch -q --depth 1 origin main
+remote_ver="$(git show FETCH_HEAD:"$CASK_PATH" 2>/dev/null \
+  | grep -oE '^[[:space:]]*version[[:space:]]+"[^"]*"' | head -1 \
+  | sed 's/.*"\(.*\)".*/\1/')"
+if [ "$remote_ver" != "$VER" ]; then
+  echo "校验失败：远端 cask 版本为「${remote_ver}」，期望「${VER}」" >&2
+  echo "可能原因：推送未真正生效，或 tap 有分支保护。" >&2
+  exit 1
+fi
+
+echo "== 完成：$TAP_REPO 已升级到 ${VER}（已回读远端确认）=="
 echo "   用户侧：brew update && brew upgrade --cask lefu"
